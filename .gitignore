@@ -1,0 +1,6 @@
+*.local
+*.identcache
+dunit.ini
+*.dll
+*.dcu
+*.exe
