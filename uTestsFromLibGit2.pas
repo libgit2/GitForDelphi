@@ -17,6 +17,7 @@ type
       procedure index2_load_test_0601;
       procedure index_find_test_0601;
       procedure index_findempty_test_0601;
+      procedure readtag_0801;      
    end;
 
 implementation
@@ -33,6 +34,9 @@ const
    TEST_INDEX_ENTRY_COUNT = 109;
    TEST_INDEX2_ENTRY_COUNT = 1437;
 
+   tag1_id = 'b25fa35b38051e4ae45d4222e795f9df2e43f1d1';
+   tag2_id = '7b4384978d2493e851f9cca7858815fac9b10980';
+   tagged_commit = 'e90810b8df3e80c413d903f631643c716887138d';
 
 type
    Ptest_entry = ^test_entry;
@@ -53,6 +57,13 @@ const
       (index: 48; path: 'src/revobject.h';   file_size: 1448;  mtime: $4C3F7FE2)
    );
 
+function git_oid_cmp(const a, b: Pgit_oid): Integer;
+begin
+   if CompareMem(@a.id, @b.id, sizeof(a.id)) then
+      Result := 0
+   else
+      Result := 1;
+end;
 
 procedure TTestGitForDelphi.index_load_test_0601;
 var
@@ -225,6 +236,37 @@ begin
       CheckTrue(Pos(#10, message_short) = 0);
       CheckTrue(commit_time > 0);
    end;
+
+   git_repository_free(repo);
+end;
+
+procedure TTestGitForDelphi.readtag_0801;
+var
+   repo: Pgit_repository;
+   tag1, tag2: Pgit_tag;
+   commit: Pgit_commit;
+   id1, id2, id_commit: git_oid;
+begin
+   must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+   git_oid_mkstr(@id1, tag1_id);
+   git_oid_mkstr(@id2, tag2_id);
+   git_oid_mkstr(@id_commit, tagged_commit);
+
+   must_pass(git_tag_lookup(&tag1, repo, @id1));
+
+   CheckTrue(StrComp(git_tag_name(tag1), 'test') = 0);
+   CheckTrue(git_tag_type(tag1) = GIT_OBJ_TAG);
+
+   tag2 := Pgit_tag(git_tag_target(tag1));
+   CheckTrue(tag2 <> nil);
+
+   CheckTrue(git_oid_cmp(@id2, git_tag_id(tag2)) = 0);
+
+   commit := Pgit_commit(git_tag_target(tag2));
+   CheckTrue(commit <> nil);
+
+   CheckTrue(git_oid_cmp(@id_commit, git_commit_id(commit)) = 0);
 
    git_repository_free(repo);
 end;

@@ -148,6 +148,7 @@ type
    size_t   = LongWord;
    time_t   = Int64;
    off_t    = Int64;
+   git_otype = Integer; // enum as constants above
 
    git_file = Integer;
 
@@ -194,6 +195,7 @@ type
    Pgit_revwalk_list = ^git_revwalk_list;
    Pgit_revwalk_commit = ^git_revwalk_commit;
    Pgit_revwalk_listnode = ^git_revwalk_listnode;
+   Pgit_tag = ^git_tag;
 
    Pindex_entry = ^index_entry;
 
@@ -713,6 +715,25 @@ type
       sorting:                                           UInt;
    end;
 
+//   struct git_tag {
+//      git_object object;
+//
+//      git_object *target;
+//      git_otype type;
+//      char *tag_name;
+//      git_person *tagger;
+//      char *message;
+//   };
+   git_tag = record
+      object_:                                           git_object;
+
+      target:                                            Pgit_object;
+      type_:                                             git_otype;
+      tag_name:                                          PAnsiChar;
+      tagger:                                            Pgit_person;
+      message_:                                          PAnsiChar;
+   end;
+   
 var
    // int git_repository_open(git_repository **repo_out, const char *path)
    git_repository_open:          function (var repo_out: Pgit_repository; const path: PAnsiChar): Integer cdecl;
@@ -771,6 +792,24 @@ var
    // GIT_EXTERN(int) git_index_find(git_index *index, const char *path);
    git_index_find:               function (index: Pgit_index; const path: PAnsiChar): Integer cdecl;
 
+   // GIT_EXTERN(int) git_tag_lookup(git_tag **tag, git_repository *repo, const git_oid *id);
+   git_tag_lookup:               function (var tag: Pgit_tag; repo: Pgit_repository; const id: Pgit_oid): Integer cdecl;
+
+   // GIT_EXTERN(const char *) git_tag_name(git_tag *t);
+   git_tag_name:                 function (t: Pgit_tag): PAnsiChar cdecl;
+
+   // GIT_EXTERN(git_otype) git_tag_type(git_tag *t);
+   git_tag_type:                 function (t: Pgit_tag): git_otype cdecl;
+
+   // GIT_EXTERN(const git_object *) git_tag_target(git_tag *t);
+   git_tag_target:               function (t: Pgit_tag): Pgit_object cdecl;
+
+   // GIT_EXTERN(const git_oid *) git_tag_id(git_tag *tag);
+   git_tag_id:                   function (tag: Pgit_tag): Pgit_oid cdecl;
+
+   // GIT_EXTERN(const git_oid *) git_commit_id(git_commit *commit);
+   git_commit_id:                function (commit: Pgit_commit): Pgit_oid cdecl;
+
 implementation
 
 var
@@ -802,6 +841,12 @@ begin
       git_index_read             := GetProcAddress(libgit2, 'git_index_read');
       git_index_free             := GetProcAddress(libgit2, 'git_index_free');
       git_index_find             := GetProcAddress(libgit2, 'git_index_find');
+      git_tag_lookup             := GetProcAddress(libgit2, 'git_tag_lookup');
+      git_tag_name               := GetProcAddress(libgit2, 'git_tag_name');
+      git_tag_type               := GetProcAddress(libgit2, 'git_tag_type');
+      git_tag_target             := GetProcAddress(libgit2, 'git_tag_target');
+      git_tag_id                 := GetProcAddress(libgit2, 'git_tag_id');
+      git_commit_id              := GetProcAddress(libgit2, 'git_commit_id');
     end;
   end;
 
@@ -834,6 +879,12 @@ begin
     git_index_read               := nil;
     git_index_free               := nil;
     git_index_find               := nil;
+    git_tag_lookup               := nil;
+    git_tag_name                 := nil;
+    git_tag_type                 := nil;
+    git_tag_target               := nil;
+    git_tag_id                   := nil;
+    git_commit_id                := nil;
   end;
 end;
 

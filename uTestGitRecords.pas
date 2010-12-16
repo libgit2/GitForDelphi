@@ -16,6 +16,7 @@ type
       procedure Test_git_rawobj;
       procedure Test_git_map;
       procedure Test_git_odb;
+      procedure Test_git_tag;
    end;
 
 implementation
@@ -219,6 +220,30 @@ begin
    CheckEquals(  8, offsetof('iterator'),   'iterator');
    CheckEquals( 20, offsetof('next'),       'next');
    CheckEquals( 28, offsetof('sorting'),    'sorting');
+end;
+
+procedure TTestGitRecords.Test_git_tag;
+   function offsetof(const Value: string): Integer;
+   var
+     item: git_tag;
+   begin
+     if Value = 'object_'                 then Result := Integer(@item.object_) - Integer(@item)
+     else if Value = 'target'             then Result := Integer(@item.target) - Integer(@item)
+     else if Value = 'type_'              then Result := Integer(@item.type_) - Integer(@item)
+     else if Value = 'tag_name'           then Result := Integer(@item.tag_name) - Integer(@item)
+     else if Value = 'tagger'             then Result := Integer(@item.tagger) - Integer(@item)
+     else if Value = 'message_'           then Result := Integer(@item.message_) - Integer(@item)
+     else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
+   end;
+begin
+   CheckEquals( 72, sizeof(git_tag),               'git_tag size');
+
+   CheckEquals(  0, offsetof('object_'),           'object_');
+   CheckEquals( 52, offsetof('target'),            'target');
+   CheckEquals( 56, offsetof('type_'),             'type_');
+   CheckEquals( 60, offsetof('tag_name'),          'tag_name');
+   CheckEquals( 64, offsetof('tagger'),            'tagger');
+   CheckEquals( 68, offsetof('message_'),          'message_');
 end;
 
 procedure TTestGitRecords.Test_sizes;
