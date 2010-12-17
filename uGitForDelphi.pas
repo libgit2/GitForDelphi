@@ -760,6 +760,12 @@ var
    // GIT_EXTERN(int) git_oid_mkstr(git_oid *out, const char *str);
    git_oid_mkstr:                function (aOut: Pgit_oid; aStr: PAnsiChar): Integer cdecl;
 
+   // GIT_EXTERN(void) git_oid_fmt(char *str, const git_oid *oid);
+   git_oid_fmt:                  procedure (aStr: PAnsiChar; const oid: Pgit_oid) cdecl;
+
+   // GIT_EXTERN(void) git_oid_pathfmt(char *str, const git_oid *oid);
+   git_oid_pathfmt:              procedure (aStr: PAnsiChar; const oid: Pgit_oid) cdecl;
+
    // GIT_EXTERN(int) git_commit_lookup(git_commit **commit, git_repository *repo, const git_oid *id);
    git_commit_lookup:            function (var commit: Pgit_commit; repo: Pgit_repository; const id: Pgit_oid): Integer cdecl;
 
@@ -799,9 +805,6 @@ var
    // GIT_EXTERN(git_commit *) git_revwalk_next(git_revwalk *walk);
    git_revwalk_next:             function (walk: Pgit_revwalk): Pgit_commit cdecl;
 
-   // GIT_EXTERN(void) git_oid_fmt(char *str, const git_oid *oid);
-   git_oid_fmt:                  procedure (aStr: PAnsiChar; const oid: Pgit_oid) cdecl;
-
    // GIT_EXTERN(int) git_index_open_bare(git_index **index, const char *index_path);
    git_index_open_bare:          function (var index: Pgit_index; const index_path: PAnsiChar): Integer cdecl;
 
@@ -832,8 +835,17 @@ var
    // GIT_EXTERN(const git_oid *) git_tag_id(git_tag *tag);
    git_tag_id:                   function (tag: Pgit_tag): Pgit_oid cdecl;
 
+   // GIT_EXTERN(void) git_tag_set_name(git_tag *tag, const char *name);
+   git_tag_set_name:             procedure (tag: Pgit_tag; const name: PAnsiChar) cdecl;
+
    // GIT_EXTERN(const git_oid *) git_commit_id(git_commit *commit);
    git_commit_id:                function (commit: Pgit_commit): Pgit_oid cdecl;
+
+   // GIT_EXTERN(const git_oid *) git_object_id(git_object *obj);
+   git_object_id:                function (obj: Pgit_object): Pgit_oid cdecl;
+
+   // GIT_EXTERN(int) git_object_write(git_object *object);
+   git_object_write:             function (object_: Pgit_object): Integer cdecl;
 
 implementation
 
@@ -850,6 +862,8 @@ begin
       git_repository_open        := GetProcAddress(libgit2, 'git_repository_open');
       git_repository_free        := GetProcAddress(libgit2, 'git_repository_free');
       git_oid_mkstr              := GetProcAddress(libgit2, 'git_oid_mkstr');
+      git_oid_fmt                := GetProcAddress(libgit2, 'git_oid_fmt');
+      git_oid_pathfmt            := GetProcAddress(libgit2, 'git_oid_pathfmt');
       git_commit_lookup          := GetProcAddress(libgit2, 'git_commit_lookup');
       git_commit_message_short   := GetProcAddress(libgit2, 'git_commit_message_short');
       git_commit_message         := GetProcAddress(libgit2, 'git_commit_message');
@@ -863,7 +877,6 @@ begin
       git_revwalk_sorting        := GetProcAddress(libgit2, 'git_revwalk_sorting');
       git_revwalk_push           := GetProcAddress(libgit2, 'git_revwalk_push');
       git_revwalk_next           := GetProcAddress(libgit2, 'git_revwalk_next');
-      git_oid_fmt                := GetProcAddress(libgit2, 'git_oid_fmt');
       git_index_open_bare        := GetProcAddress(libgit2, 'git_index_open_bare');
       git_index_read             := GetProcAddress(libgit2, 'git_index_read');
       git_index_free             := GetProcAddress(libgit2, 'git_index_free');
@@ -874,7 +887,10 @@ begin
       git_tag_type               := GetProcAddress(libgit2, 'git_tag_type');
       git_tag_target             := GetProcAddress(libgit2, 'git_tag_target');
       git_tag_id                 := GetProcAddress(libgit2, 'git_tag_id');
+      git_tag_set_name           := GetProcAddress(libgit2, 'git_tag_set_name');
       git_commit_id              := GetProcAddress(libgit2, 'git_commit_id');
+      git_object_id              := GetProcAddress(libgit2, 'git_object_id');
+      git_object_write           := GetProcAddress(libgit2, 'git_object_write');
     end;
   end;
 
@@ -891,6 +907,8 @@ begin
     git_repository_open          := nil;
     git_repository_free          := nil;
     git_oid_mkstr                := nil;
+    git_oid_fmt                  := nil;
+    git_oid_pathfmt              := nil;
     git_commit_lookup            := nil;
     git_commit_message_short     := nil;
     git_commit_message           := nil;
@@ -904,7 +922,6 @@ begin
     git_revwalk_sorting          := nil;
     git_revwalk_push             := nil;
     git_revwalk_next             := nil;
-    git_oid_fmt                  := nil;
     git_index_open_bare          := nil;
     git_index_read               := nil;
     git_index_free               := nil;
@@ -915,7 +932,10 @@ begin
     git_tag_type                 := nil;
     git_tag_target               := nil;
     git_tag_id                   := nil;
+    git_tag_set_name             := nil;
     git_commit_id                := nil;
+    git_object_id                := nil;
+    git_object_write             := nil;
   end;
 end;
 

@@ -3,12 +3,14 @@ unit uTestsFromLibGit2;
 interface
 
 uses
-   TestFramework, SysUtils, Windows;
+   TestFramework, SysUtils, Windows,
+   uGitForDelphi;
 
 type
-   TTestGitForDelphi = class(TTestCase)
+   TTestsFromLibGit2 = class(TTestCase)
    private
       procedure must_pass(aResult: Integer);
+      function remove_loose_object(const aRepository_folder: PAnsiChar; object_: Pgit_object): Integer;
    published
       procedure query_details_test_0402;
       procedure simple_walk_test_0501;
@@ -17,22 +19,18 @@ type
       procedure index2_load_test_0601;
       procedure index_find_test_0601;
       procedure index_findempty_test_0601;
-      procedure readtag_0801;      
+      procedure readtag_0801;
+      procedure tag_writeback_test_0802;      
    end;
 
 implementation
 
-uses
-   uGitForDelphi;
-
-{ TTestGitForDelphi }
-
 const
-   REPOSITORY_FOLDER = 'testrepo.git';
-   TEST_INDEX_PATH   = 'testrepo.git/index';
-   TEST_INDEX2_PATH  = 'gitgit.index';
-   TEST_INDEX_ENTRY_COUNT = 109;
-   TEST_INDEX2_ENTRY_COUNT = 1437;
+   REPOSITORY_FOLDER_         = 'testrepo.git/';
+   TEST_INDEX_PATH            = 'testrepo.git/index';
+   TEST_INDEX2_PATH           = 'gitgit.index';
+   TEST_INDEX_ENTRY_COUNT     = 109;
+   TEST_INDEX2_ENTRY_COUNT    = 1437;
 
    tag1_id = 'b25fa35b38051e4ae45d4222e795f9df2e43f1d1';
    tag2_id = '7b4384978d2493e851f9cca7858815fac9b10980';
@@ -57,6 +55,11 @@ const
       (index: 48; path: 'src/revobject.h';   file_size: 1448;  mtime: $4C3F7FE2)
    );
 
+function REPOSITORY_FOLDER: String;
+begin
+   Result := ExtractFilePath(ParamStr(0)) + REPOSITORY_FOLDER_;
+end;
+
 function git_oid_cmp(const a, b: Pgit_oid): Integer;
 begin
    if CompareMem(@a.id, @b.id, sizeof(a.id)) then
@@ -65,7 +68,59 @@ begin
       Result := 1;
 end;
 
-procedure TTestGitForDelphi.index_load_test_0601;
+function TTestsFromLibGit2.remove_loose_object(const aRepository_folder: PAnsiChar; object_: Pgit_object): Integer;
+const
+   objects_folder = 'objects/';
+var
+   ptr, full_path, top_folder: PAnsiChar;
+   path_length, objects_length: Integer;
+   dwAttrs: Cardinal;
+begin
+   CheckTrue(aRepository_folder <> nil);
+   CheckTrue(object_ <> nil);
+
+   objects_length := strlen(objects_folder);
+   path_length := strlen(aRepository_folder);
+   GetMem(full_path, path_length + objects_length + GIT_OID_HEXSZ + 3);
+   ptr := full_path;
+
+   StrCopy(ptr, aRepository_folder);
+   StrCopy(ptr + path_length, objects_folder);
+
+   top_folder := ptr + path_length + objects_length;
+   ptr := top_folder;
+
+   ptr^ := '/';
+   Inc(ptr);
+   git_oid_pathfmt(ptr, git_object_id(object_));
+   Inc(ptr, GIT_OID_HEXSZ + 1);
+   ptr^ := #0;
+
+   dwAttrs := GetFileAttributes(full_path);
+   if SetFileAttributes(full_path, dwAttrs and (not FILE_ATTRIBUTE_READONLY)) and (not DeleteFile(full_path)) then
+   begin
+      raise Exception.CreateFmt('can''t delete object file "%s"', [full_path]);
+      Result := -1;
+      Exit;
+   end;
+
+   top_folder^ := #0;
+
+   if (not RemoveDirectory(full_path)) and (GetLastError <> ERROR_DIR_NOT_EMPTY) then
+   begin
+      raise Exception.CreateFmt('can''t remove object directory "%s"', [full_path]);
+      Result := -1;
+      Exit;
+   end;
+
+   FreeMem(full_path, path_length + objects_length + GIT_OID_HEXSZ + 3);
+
+   Result := GIT_SUCCESS;
+end;
+
+{ TTestsFromLibGit2 }
+
+procedure TTestsFromLibGit2.index_load_test_0601;
 var
    path: String;
    index: Pgit_index;
@@ -100,7 +155,7 @@ begin
    git_index_free(index);
 end;
 
-procedure TTestGitForDelphi.must_pass(aResult: Integer);
+procedure TTestsFromLibGit2.must_pass(aResult: Integer);
    function GitReturnValue: String;
    begin
       case aResult of
@@ -130,7 +185,7 @@ begin
    end;
 end;
 
-procedure TTestGitForDelphi.index2_load_test_0601;
+procedure TTestsFromLibGit2.index2_load_test_0601;
 var
    index: Pgit_index;
 begin
@@ -147,7 +202,7 @@ begin
    git_index_free(index);
 end;
 
-procedure TTestGitForDelphi.index_findempty_test_0601;
+procedure TTestsFromLibGit2.index_findempty_test_0601;
 var
    index: Pgit_index;
    i, idx: Integer;
@@ -163,7 +218,7 @@ begin
    git_index_free(index);
 end;
 
-procedure TTestGitForDelphi.index_find_test_0601;
+procedure TTestsFromLibGit2.index_find_test_0601;
 var
    index: Pgit_index;
    i, idx: Integer;
@@ -180,7 +235,7 @@ begin
    git_index_free(index);
 end;
 
-procedure TTestGitForDelphi.index_loadempty_test_0601;
+procedure TTestsFromLibGit2.index_loadempty_test_0601;
 var
    index: Pgit_index;
 begin
@@ -196,7 +251,7 @@ begin
    git_index_free(index);
 end;
 
-procedure TTestGitForDelphi.query_details_test_0402;
+procedure TTestsFromLibGit2.query_details_test_0402;
 const
    commit_ids: array[0..5] of string = (
       'a4a7dce85cf63874e984719f4fdd239f5145052f', { 0 }
@@ -217,7 +272,7 @@ var
    parents, p:              UInt;
    parent:                  Pgit_commit;
 begin
-   git_repository_open(repo, PAnsiChar(ExtractFilePath(ParamStr(0)) + REPOSITORY_FOLDER));
+   git_repository_open(repo, PAnsiChar(REPOSITORY_FOLDER));
 
    for i := Low(commit_ids) to High(commit_ids) do
    begin
@@ -255,20 +310,20 @@ begin
    git_repository_free(repo);
 end;
 
-procedure TTestGitForDelphi.readtag_0801;
+procedure TTestsFromLibGit2.readtag_0801;
 var
    repo: Pgit_repository;
    tag1, tag2: Pgit_tag;
    commit: Pgit_commit;
    id1, id2, id_commit: git_oid;
 begin
-   must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+   must_pass(git_repository_open(repo, PAnsiChar(REPOSITORY_FOLDER)));
 
    git_oid_mkstr(@id1, tag1_id);
    git_oid_mkstr(@id2, tag2_id);
    git_oid_mkstr(@id_commit, tagged_commit);
 
-   must_pass(git_tag_lookup(&tag1, repo, @id1));
+   must_pass(git_tag_lookup(tag1, repo, @id1));
 
    CheckTrue(StrComp(git_tag_name(tag1), 'test') = 0);
    CheckTrue(git_tag_type(tag1) = GIT_OBJ_TAG);
@@ -286,7 +341,7 @@ begin
    git_repository_free(repo);
 end;
 
-procedure TTestGitForDelphi.simple_walk_test_0501;
+procedure TTestsFromLibGit2.simple_walk_test_0501;
 type
    TArray6 = array[0..5] of Integer;
 const
@@ -386,7 +441,7 @@ begin
    repo := nil;
    head := nil;
 
-   git_repository_open(repo, PAnsiChar(ExtractFilePath(ParamStr(0)) + REPOSITORY_FOLDER));
+   git_repository_open(repo, PAnsiChar(REPOSITORY_FOLDER));
 
    git_revwalk_new(walk, repo);
 
@@ -422,8 +477,36 @@ begin
    git_repository_free(repo);
 end;
 
+procedure TTestsFromLibGit2.tag_writeback_test_0802;
+var
+   id: git_oid;
+   repo: Pgit_repository;
+   tag: Pgit_tag;
+//   hex_oid: array [0..40] of AnsiChar;
+begin
+   must_pass(git_repository_open(repo, PAnsiChar(REPOSITORY_FOLDER)));
+
+   git_oid_mkstr(@id, tag1_id);
+
+   must_pass(git_tag_lookup(tag, repo, @id));
+
+   git_tag_set_name(tag, 'This is a different tag LOL');
+
+   must_pass(git_object_write(Pgit_object(tag)));
+
+(*
+   git_oid_fmt(@hex_oid, git_tag_id(tag));
+   hex_oid[40] := #0;
+   printf('TAG New SHA1: %s\n', hex_oid);
+*)
+
+   must_pass(remove_loose_object(PAnsiChar(REPOSITORY_FOLDER), Pgit_object(tag)));
+
+   git_repository_free(repo);
+end;
+
 initialization
    InitLibgit2;
-   RegisterTest(TTestGitForDelphi.Suite);
+   RegisterTest(TTestsFromLibGit2.Suite);
 
 end.
