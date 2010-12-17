@@ -109,7 +109,7 @@ const
    GIT_EFLOCKFAIL       = (GIT_ERROR - 11);
    GIT_EZLIB            = (GIT_ERROR - 12);
    GIT_EBUSY            = (GIT_ERROR - 13);
-   GIT_EBAREINDEX       = (GIT_ERROR -14);
+   GIT_EBAREINDEX       = (GIT_ERROR - 14);
 //
 //   /**
 //    * Sort the repository contents in no particular ordering;
@@ -165,6 +165,7 @@ type
       id:                                                array[0..GIT_OID_RAWSZ-1] of Byte;
    end;
 
+   PPByte = ^PByte;
    Pgit_repository = ^git_repository;
    PPgit_pack = ^Pgit_pack;
    Pgit_pack = ^git_pack;
@@ -174,12 +175,12 @@ type
    PPgit_odb = ^Pgit_odb;
    Pgit_commit = ^git_commit;
    PPgit_commit = ^Pgit_commit;
-   Pgit_commit_parents = ^git_commit_parents;
    Pgit_index = ^git_index;
    Pgit_hashtable = ^git_hashtable;
    Pgit_hashtable_node = ^git_hashtable_node;
    PPgit_hashtable_node = ^Pgit_hashtable_node;
    Pgit_map = ^git_map;
+   PPgit_index_entry = ^Pgit_index_entry;
    Pgit_index_entry = ^git_index_entry;
    Pgit_index_tree = ^git_index_tree;
    PPgit_index_tree = ^Pgit_index_tree;
@@ -196,8 +197,83 @@ type
    Pgit_revwalk_commit = ^git_revwalk_commit;
    Pgit_revwalk_listnode = ^git_revwalk_listnode;
    Pgit_tag = ^git_tag;
+   Ppack_backend = ^pack_backend;
 
-   Pindex_entry = ^index_entry;
+//   typedef int (*git_vector_cmp)(const void *, const void *);
+   git_vector_cmp = Pointer;
+
+//   typedef int (*git_vector_srch)(const void *, const void *);
+   git_vector_srch = Pointer;
+
+//   typedef struct git_vector {
+//      unsigned int _alloc_size;
+//      git_vector_cmp _cmp;
+//      git_vector_srch _srch;
+//
+//      void **contents;
+//      unsigned int length;
+//   } git_vector;
+   git_vector = record
+      _alloc_size:                                       UInt;
+      _cmp:                                              git_vector_cmp;
+      _srch:                                             git_vector_srch;
+
+      contents:                                          PPByte;
+      length:                                            UInt;
+   end;
+
+//   struct git_odb_backend {
+//      git_odb *odb;
+//
+//      int priority;
+//
+//      int (* read)(
+//            git_rawobj *,
+//            struct git_odb_backend *,
+//            const git_oid *);
+//
+//      int (* read_header)(
+//            git_rawobj *,
+//            struct git_odb_backend *,
+//            const git_oid *);
+//
+//      int (* write)(
+//            git_oid *id,
+//            struct git_odb_backend *,
+//            git_rawobj *obj);
+//
+//      int (* exists)(
+//            struct git_odb_backend *,
+//            const git_oid *);
+//
+//      void (* free)(struct git_odb_backend *);
+//   };
+   git_odb_backend = record
+      odb:                                               Pgit_odb;
+
+      priority:                                          Integer;
+
+      read:                                              Pointer;
+      read_header:                                       Pointer;
+      write:                                             Pointer;
+      exists:                                            Pointer;
+      free:                                              Pointer;
+   end;
+
+//   typedef struct pack_backend {
+//      git_odb_backend parent;
+//
+//      git_lck lock;
+//      char *objects_dir;
+//      git_packlist *packlist;
+//   } pack_backend;
+   pack_backend = record
+      parent:                                            git_odb_backend;
+
+      lock:                                              git_lck;
+      objects_dir:                                       PAnsiChar;
+      packlist:                                          Pgit_packlist;
+   end;
 
 //   typedef struct {
 //      size_t n_packs;
@@ -209,42 +285,14 @@ type
       refcnt:                                            UInt;
       packs:                                             PPgit_pack;
    end;
-   
+
 //   struct git_odb {
-//      git_lck lock;
-//
-//      /** Path to the "objects" directory. */
-//      char *objects_dir;
-//
-//      /** Known pack files from ${objects_dir}/packs. */
-//      git_packlist *packlist;
-//
-//      /** Alternate databases to search. */
-//      git_odb **alternates;
-//      size_t n_alternates;
-//
-//      /** loose object zlib compression level. */
-//      int object_zlib_level;
-//      /** loose object file fsync flag. */
-//      int fsync_object_files;
+//      void *_internal;
+//      git_vector backends;
 //   };
    git_odb = record
-      lock:                                              git_lck;
-
-      //* Path to the "objects" directory. */
-      objects_dir:                                       PAnsiChar;
-
-      //* Known pack files from ${objects_dir}/packs. */
-      packlist:                                          Pgit_packlist;
-
-      //* Alternate databases to search. */
-      alternates:                                        PPgit_odb;
-      n_alternates:                                      size_t;
-
-      //* loose object zlib compression level. */
-      object_zlib_level:                                 Integer;
-      //* loose object file fsync flag. */
-      fsync_object_files:                                Integer;
+      _internal:                                         PByte;
+      backends:                                          git_vector;
    end;
 
 //   typedef struct {  /* memory mapped buffer   */
@@ -260,21 +308,8 @@ type
       fmh:                                               THandle;  //* file mapping handle */
    end;
 
-//   typedef struct {
-//      uint32_t      n;
-//      unsigned char *oid;
-//      off_t         offset;
-//      off_t         size;
-//   } index_entry;
-   index_entry = record
-      n:                                                 UInt;
-      oid:                                               PByte;
-      offset:                                            off_t;
-      size:                                              off_t;
-   end;
-
 //   struct git_pack {
-//      git_odb *db;
+//      struct pack_backend *backend;
 //      git_lck lock;
 //
 //      /** Functions to access idx_map. */
@@ -328,9 +363,9 @@ type
 //
 //      /** Name of the pack file(s), without extension ("pack-abc"). */
 //      char pack_name[GIT_PACK_NAME_MAX];
-//   };
+//   } git_pack;
    git_pack = record
-      db:                                                Pgit_odb;
+      backend:                                           Ppack_backend;
       lock:                                              git_lck;
 
       //* Functions to access idx_map. */
@@ -377,12 +412,12 @@ type
    end;
 
 //   typedef struct {
-//      unsigned int seconds;
-//      unsigned int nanoseconds;
+//      time_t seconds;
+//      time_t nanoseconds;
 //   } git_index_time;
    git_index_time = record
-      seconds:                                           UInt;
-      nanoseconds:                                       UInt;
+      seconds:                                           time_t;
+      nanoseconds:                                       time_t;
    end;
 
 //   typedef struct git_index_entry {
@@ -394,7 +429,7 @@ type
 //      unsigned int mode;
 //      unsigned int uid;
 //      unsigned int gid;
-//      unsigned int file_size;
+//      off_t file_size;
 //
 //      git_oid oid;
 //
@@ -412,7 +447,7 @@ type
       mode:                                              UInt;
       uid:                                               UInt;
       gid:                                               UInt;
-      file_size:                                         UInt;
+      file_size:                                         off_t;
 
       oid:                                               git_oid;
 
@@ -442,16 +477,14 @@ type
       entries:                                           size_t;
       oid:                                               git_oid;
    end;
+
 //   struct git_index {
 //      git_repository *repository;
 //      char *index_file_path;
 //
 //      time_t last_modified;
+//      git_vector entries;
 //
-//      git_index_entry *entries;
-//      unsigned int entries_size;
-//
-//      unsigned int entry_count;
 //      unsigned int sorted:1,
 //                on_disk:1;
 //
@@ -462,14 +495,12 @@ type
       index_file_path:                                   PAnsiChar;
 
       last_modified:                                     time_t;
+      entries:                                           git_vector;
 
-      entries:                                           Pgit_index_entry;
-      entries_size:                                      UInt;
-
-      entry_count:                                       UInt;
       sortedANDon_disk:                                  UInt;
 
       tree:                                              Pgit_index_tree;
+
       function GetSorted: Integer;
       function GetOnDisk: Integer;
       property sorted: Integer read GetSorted;
@@ -494,8 +525,6 @@ type
 //      unsigned int count;
 //      unsigned int max_count;
 //
-//      // typedef uint32_t (*git_hash_ptr)(const void *);
-//      // typedef int (*git_hash_keyeq_ptr)(void *obj, const void *obj_key);
 //      git_hash_ptr hash;
 //      git_hash_keyeq_ptr key_equal;
 //   };
@@ -506,9 +535,10 @@ type
       count:                                             UInt;
       max_count:                                         UInt;
 
-      hash:        Pointer; // function(const v: PByte): UInt cdecl;
-      key_equal:   Pointer; // function(v: PByte; const obj_key: PByte): Integer cdecl;
+      hash:        Pointer;
+      key_equal:   Pointer;
    end;
+   
 //   struct git_repository {
 //      git_odb *db;
 //      git_index *index;
@@ -542,7 +572,7 @@ type
    git_rawobj = record
       data:                                              PByte;
       len:                                               size_t;
-      type_:                                             Integer;
+      type_:                                             git_otype;
    end;
    
 //   typedef struct {
@@ -557,6 +587,7 @@ type
       written_bytes:                                     size_t;
       open:                                              Integer;
    end;
+
 //   struct git_object {
 //      git_oid id;
 //      git_repository *repo;
@@ -587,33 +618,18 @@ type
 
 //   struct git_tree {
 //      git_object object;
-//
-//      git_tree_entry **entries;
-//      size_t entry_count;
-//      size_t array_size;
+//      git_vector entries;
 //   };
    git_tree = record
       object_:                                           git_object;
-
-      entries:                                           PPgit_tree_entry;
-      entry_count:                                       size_t;
-      array_size:                                        size_t;
-   end;
-
-//   typedef struct git_commit_parents {
-//      git_commit *commit;
-//      struct git_commit_parents *next;
-//   } git_commit_parents;
-   git_commit_parents = record
-      commit:                                            Pgit_commit;
-      next:                                              Pgit_commit_parents;
+      entries:                                           git_vector;
    end;
 
 //   struct git_commit {
 //      git_object object;
 //
 //      time_t commit_time;
-//      git_commit_parents *parents;
+//      git_vector parents;
 //
 //      git_tree *tree;
 //      git_person *author;
@@ -628,7 +644,7 @@ type
       object_:                                           git_object;
 
       commit_time:                                       time_t;
-      parents:                                           Pgit_commit_parents;
+      parents:                                           git_vector;
 
       tree:                                              Pgit_tree;
       author:                                            Pgit_person;
@@ -735,32 +751,38 @@ type
    end;
    
 var
-   // int git_repository_open(git_repository **repo_out, const char *path)
+   // GIT_EXTERN(int) git_repository_open(git_repository **repository, const char *path);
    git_repository_open:          function (var repo_out: Pgit_repository; const path: PAnsiChar): Integer cdecl;
 
-   // void git_repository_free(git_repository *repo)
+   // GIT_EXTERN(void) git_repository_free(git_repository *repo);
    git_repository_free:          procedure (repo: Pgit_repository) cdecl;
 
-   // int git_oid_mkstr(git_oid *out, const char *str)
+   // GIT_EXTERN(int) git_oid_mkstr(git_oid *out, const char *str);
    git_oid_mkstr:                function (aOut: Pgit_oid; aStr: PAnsiChar): Integer cdecl;
 
    // GIT_EXTERN(int) git_commit_lookup(git_commit **commit, git_repository *repo, const git_oid *id);
    git_commit_lookup:            function (var commit: Pgit_commit; repo: Pgit_repository; const id: Pgit_oid): Integer cdecl;
 
-   // GIT_EXTERN                     (const char *) git_commit_message_short                     (git_commit *commit);
+   // GIT_EXTERN(const char *) git_commit_message_short(git_commit *commit);
    git_commit_message_short:     function (commit: Pgit_commit): PAnsiChar cdecl;
 
-   // GIT_EXTERN                     (const char *) git_commit_message                     (git_commit *commit);
+   // GIT_EXTERN(const char *) git_commit_message(git_commit *commit);
    git_commit_message:           function (commit: Pgit_commit): PAnsiChar cdecl;
 
-   // GIT_EXTERN                     (const git_person *) git_commit_author                     (git_commit *commit);
+   // GIT_EXTERN(const git_person *) git_commit_author(git_commit *commit);
    git_commit_author:            function (commit: Pgit_commit): Pgit_person cdecl;
 
-   // GIT_EXTERN                     (const git_person *) git_commit_committer                     (git_commit *commit);
+   // GIT_EXTERN(const git_person *) git_commit_committer(git_commit *commit);
    git_commit_committer:         function (commit: Pgit_commit): Pgit_person cdecl;
 
-   // GIT_EXTERN                     (time_t) git_commit_time                     (git_commit *commit);
+   // GIT_EXTERN(time_t) git_commit_time(git_commit *commit);
    git_commit_time:              function (commit: Pgit_commit): time_t cdecl;
+
+   // GIT_EXTERN(unsigned int) git_commit_parentcount(git_commit *commit);
+   git_commit_parentcount:       function (commit: Pgit_commit): UInt cdecl;
+
+   // GIT_EXTERN(git_commit *) git_commit_parent(git_commit *commit, unsigned int n);
+   git_commit_parent:            function (commit: Pgit_commit; n: UInt): Pgit_commit cdecl;
 
    // GIT_EXTERN(int) git_revwalk_new(git_revwalk **walker, git_repository *repo);
    git_revwalk_new:              function (var walker: Pgit_revwalk; repo: Pgit_repository): Integer cdecl;
@@ -792,6 +814,9 @@ var
    // GIT_EXTERN(int) git_index_find(git_index *index, const char *path);
    git_index_find:               function (index: Pgit_index; const path: PAnsiChar): Integer cdecl;
 
+   // GIT_EXTERN(unsigned int) git_index_entrycount(git_index *index);
+   git_index_entrycount:         function (index: Pgit_index): UInt cdecl;
+
    // GIT_EXTERN(int) git_tag_lookup(git_tag **tag, git_repository *repo, const git_oid *id);
    git_tag_lookup:               function (var tag: Pgit_tag; repo: Pgit_repository; const id: Pgit_oid): Integer cdecl;
 
@@ -819,7 +844,7 @@ function InitLibgit2: Boolean;
 begin
   if libgit2 = 0 then
   begin
-    libgit2 := LoadLibrary('libgit2.dll');
+    libgit2 := LoadLibrary('git2.dll');
     if libgit2 > 0 then
     begin
       git_repository_open        := GetProcAddress(libgit2, 'git_repository_open');
@@ -831,6 +856,8 @@ begin
       git_commit_author          := GetProcAddress(libgit2, 'git_commit_author');
       git_commit_committer       := GetProcAddress(libgit2, 'git_commit_committer');
       git_commit_time            := GetProcAddress(libgit2, 'git_commit_time');
+      git_commit_parentcount     := GetProcAddress(libgit2, 'git_commit_parentcount');
+      git_commit_parent          := GetProcAddress(libgit2, 'git_commit_parent');
       git_revwalk_new            := GetProcAddress(libgit2, 'git_revwalk_new');
       git_revwalk_free           := GetProcAddress(libgit2, 'git_revwalk_free');
       git_revwalk_sorting        := GetProcAddress(libgit2, 'git_revwalk_sorting');
@@ -841,6 +868,7 @@ begin
       git_index_read             := GetProcAddress(libgit2, 'git_index_read');
       git_index_free             := GetProcAddress(libgit2, 'git_index_free');
       git_index_find             := GetProcAddress(libgit2, 'git_index_find');
+      git_index_entrycount       := GetProcAddress(libgit2, 'git_index_entrycount');
       git_tag_lookup             := GetProcAddress(libgit2, 'git_tag_lookup');
       git_tag_name               := GetProcAddress(libgit2, 'git_tag_name');
       git_tag_type               := GetProcAddress(libgit2, 'git_tag_type');
@@ -869,6 +897,8 @@ begin
     git_commit_author            := nil;
     git_commit_committer         := nil;
     git_commit_time              := nil;
+    git_commit_parentcount       := nil;
+    git_commit_parent            := nil;
     git_revwalk_new              := nil;
     git_revwalk_free             := nil;
     git_revwalk_sorting          := nil;
@@ -879,6 +909,7 @@ begin
     git_index_read               := nil;
     git_index_free               := nil;
     git_index_find               := nil;
+    git_index_entrycount         := nil;
     git_tag_lookup               := nil;
     git_tag_name                 := nil;
     git_tag_type                 := nil;

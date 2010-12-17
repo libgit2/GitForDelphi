@@ -44,7 +44,7 @@ type
       index:         Integer;
       path:          array [0..127] of AnsiChar;
       file_size:     size_t;
-      mtime:         UInt;
+      mtime:         time_t;
    end;
 
 const
@@ -69,24 +69,28 @@ procedure TTestGitForDelphi.index_load_test_0601;
 var
    path: String;
    index: Pgit_index;
-   i: Integer;
+   i, offset: Integer;
+   entries: PPgit_index_entry;
    e: Pgit_index_entry;
 begin
    path := StringReplace(ExtractFilePath(ParamStr(0)) + TEST_INDEX_PATH, '/', '\', [rfReplaceAll]);
 
    must_pass(git_index_open_bare(index, PAnsiChar(path)));
 
-   CheckEquals(1, index.on_disk);
+   CheckTrue(index.on_disk = 1);
 
    must_pass(git_index_read(index));
 
    CheckTrue(index.on_disk = 1);
-   CheckTrue(index.entry_count = TEST_INDEX_ENTRY_COUNT);
+   CheckTrue(git_index_entrycount(index) = TEST_INDEX_ENTRY_COUNT);
    CheckTrue(index.sorted = 1);
 
-   for i := 0 to 4 do
+   entries := PPgit_index_entry(index.entries.contents);
+
+   for i := Low(TEST_ENTRIES) to High(TEST_ENTRIES) do
    begin
-      e := Ptr(Integer(index.entries) + (TEST_ENTRIES[i].index * sizeof(git_index_entry)));
+      offset := TEST_ENTRIES[i].index * sizeof(Pgit_index_entry);
+      e := PPgit_index_entry(Integer(entries) + offset)^;
 
       CheckTrue(StrComp(e.path, TEST_ENTRIES[i].path) = 0);
       CheckTrue(e.mtime.seconds = TEST_ENTRIES[i].mtime);
@@ -136,7 +140,7 @@ begin
    must_pass(git_index_read(index));
 
    CheckTrue(index.on_disk = 1);
-   CheckTrue(index.entry_count = TEST_INDEX2_ENTRY_COUNT);
+   CheckTrue(git_index_entrycount(index) = TEST_INDEX2_ENTRY_COUNT);
    CheckTrue(index.sorted = 1);
    CheckTrue(index.tree <> nil);
 
@@ -183,10 +187,10 @@ begin
    must_pass(git_index_open_bare(index, PAnsiChar('in-memory-index')));
    CheckTrue(index.on_disk = 0);
 
-   CheckEquals(GIT_SUCCESS, git_index_read(index));
+   must_pass(git_index_read(index));
 
    CheckTrue(index.on_disk = 0);
-   CheckTrue(index.entry_count = 0);
+   CheckTrue(git_index_entrycount(index) = 0);
    CheckTrue(index.sorted = 1);
 
    git_index_free(index);
@@ -203,19 +207,19 @@ const
       '5b5b025afb0b4c913b4c338a42934a3863bf3644'  { 5 }
    );
 var
-   commit_count, i:         Integer;
+   i:                       Integer;
    repo:                    Pgit_repository;
    id:                      git_oid;
    commit:                  Pgit_commit;
    author, committer:       Pgit_person;
    message_, message_short: String;
    commit_time:             time_t;
+   parents, p:              UInt;
+   parent:                  Pgit_commit;
 begin
-   commit_count := High(commit_ids) - Low(commit_ids);
-
    git_repository_open(repo, PAnsiChar(ExtractFilePath(ParamStr(0)) + REPOSITORY_FOLDER));
 
-   for i := 0 to commit_count - 1 do
+   for i := Low(commit_ids) to High(commit_ids) do
    begin
       git_oid_mkstr(@id, PAnsiChar(commit_ids[i]));
 
@@ -226,7 +230,7 @@ begin
       author         := git_commit_author(commit);
       committer      := git_commit_committer(commit);
       commit_time    := git_commit_time(commit);
-
+      parents        := git_commit_parentcount(commit);
 
       CheckTrue(CompareStr(author.name,      'Scott Chacon') = 0);
       CheckTrue(CompareStr(author.email,     'schacon@gmail.com') = 0);
@@ -235,6 +239,17 @@ begin
       CheckTrue(Pos(#10, message_) > 0);
       CheckTrue(Pos(#10, message_short) = 0);
       CheckTrue(commit_time > 0);
+
+      CheckTrue(parents <= 2, 'parents <= 2');
+      p := 0;
+      while p < parents do
+      begin
+         parent := git_commit_parent(commit, p);
+         CheckTrue(parent <> nil, 'parent <> nil');
+         CheckTrue(git_commit_author(parent) <> nil, 'git_commit_author(parent) <> nil'); // is it really a commit?
+         Inc(p);
+      end;
+      CheckTrue(git_commit_parent(commit, parents) = nil, 'git_commit_parent(commit, parents) = nil');
    end;
 
    git_repository_free(repo);
