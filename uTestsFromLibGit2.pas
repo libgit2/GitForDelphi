@@ -10,6 +10,7 @@ type
    TTestsFromLibGit2 = class(TTestCase)
    private
       procedure must_pass(aResult: Integer);
+      procedure must_be_true(b: Boolean; const msg: String = '');
       function remove_loose_object(const aRepository_folder: PAnsiChar; object_: Pgit_object): Integer;
    published
       procedure query_details_test_0402;
@@ -20,7 +21,9 @@ type
       procedure index_find_test_0601;
       procedure index_findempty_test_0601;
       procedure readtag_0801;
-      procedure tag_writeback_test_0802;      
+      procedure tag_writeback_test_0802;
+      procedure tree_entry_access_test_0901;
+      procedure tree_read_test_0901;      
    end;
 
 implementation
@@ -32,9 +35,10 @@ const
    TEST_INDEX_ENTRY_COUNT     = 109;
    TEST_INDEX2_ENTRY_COUNT    = 1437;
 
-   tag1_id = 'b25fa35b38051e4ae45d4222e795f9df2e43f1d1';
-   tag2_id = '7b4384978d2493e851f9cca7858815fac9b10980';
-   tagged_commit = 'e90810b8df3e80c413d903f631643c716887138d';
+   tag1_id           = 'b25fa35b38051e4ae45d4222e795f9df2e43f1d1';
+   tag2_id           = '7b4384978d2493e851f9cca7858815fac9b10980';
+   tagged_commit     = 'e90810b8df3e80c413d903f631643c716887138d';
+   tree_oid          = '1810dff58d8a660512d4832e740f692884338ccd';
 
 type
    Ptest_entry = ^test_entry;
@@ -55,9 +59,9 @@ const
       (index: 48; path: 'src/revobject.h';   file_size: 1448;  mtime: $4C3F7FE2)
    );
 
-function REPOSITORY_FOLDER: String;
+function REPOSITORY_FOLDER: PAnsiChar;
 begin
-   Result := ExtractFilePath(ParamStr(0)) + REPOSITORY_FOLDER_;
+   Result := PAnsiChar(ExtractFilePath(ParamStr(0)) + REPOSITORY_FOLDER_);
 end;
 
 function git_oid_cmp(const a, b: Pgit_oid): Integer;
@@ -153,6 +157,11 @@ begin
    end;
 
    git_index_free(index);
+end;
+
+procedure TTestsFromLibGit2.must_be_true(b: Boolean; const msg: String = '');
+begin
+   CheckTrue(b, msg);
 end;
 
 procedure TTestsFromLibGit2.must_pass(aResult: Integer);
@@ -272,7 +281,7 @@ var
    parents, p:              UInt;
    parent:                  Pgit_commit;
 begin
-   git_repository_open(repo, PAnsiChar(REPOSITORY_FOLDER));
+   git_repository_open(repo, REPOSITORY_FOLDER);
 
    for i := Low(commit_ids) to High(commit_ids) do
    begin
@@ -317,7 +326,7 @@ var
    commit: Pgit_commit;
    id1, id2, id_commit: git_oid;
 begin
-   must_pass(git_repository_open(repo, PAnsiChar(REPOSITORY_FOLDER)));
+   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
    git_oid_mkstr(@id1, tag1_id);
    git_oid_mkstr(@id2, tag2_id);
@@ -441,7 +450,7 @@ begin
    repo := nil;
    head := nil;
 
-   git_repository_open(repo, PAnsiChar(REPOSITORY_FOLDER));
+   git_repository_open(repo, REPOSITORY_FOLDER);
 
    git_revwalk_new(walk, repo);
 
@@ -484,7 +493,7 @@ var
    tag: Pgit_tag;
 //   hex_oid: array [0..40] of AnsiChar;
 begin
-   must_pass(git_repository_open(repo, PAnsiChar(REPOSITORY_FOLDER)));
+   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
    git_oid_mkstr(@id, tag1_id);
 
@@ -500,7 +509,56 @@ begin
    printf('TAG New SHA1: %s\n', hex_oid);
 *)
 
-   must_pass(remove_loose_object(PAnsiChar(REPOSITORY_FOLDER), Pgit_object(tag)));
+   must_pass(remove_loose_object(REPOSITORY_FOLDER, Pgit_object(tag)));
+
+   git_repository_free(repo);
+end;
+
+procedure TTestsFromLibGit2.tree_entry_access_test_0901;
+var
+   id: git_oid ;
+   repo: Pgit_repository;
+   tree: Pgit_tree;
+begin
+   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
+
+   git_oid_mkstr(@id, tree_oid);
+
+   must_pass(git_tree_lookup(tree, repo, @id));
+
+   must_be_true(git_tree_entry_byname(tree, 'README') <> nil);
+   must_be_true(git_tree_entry_byname(tree, 'NOTEXISTS') = nil);
+   must_be_true(git_tree_entry_byname(tree, '') = nil);
+   must_be_true(git_tree_entry_byindex(tree, 0) <> nil);
+   must_be_true(git_tree_entry_byindex(tree, 2) <> nil);
+   must_be_true(git_tree_entry_byindex(tree, 3) = nil);
+   must_be_true(git_tree_entry_byindex(tree, -1) = nil);
+
+   git_repository_free(repo);
+end;
+
+procedure TTestsFromLibGit2.tree_read_test_0901;
+var
+   id: git_oid;
+   repo: Pgit_repository;
+   tree: Pgit_tree;
+   entry: Pgit_tree_entry;
+   obj: Pgit_object;
+begin
+   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
+
+   git_oid_mkstr(@id, tree_oid);
+
+   must_pass(git_tree_lookup(tree, repo, @id));
+
+   must_be_true(git_tree_entrycount(tree) = 3);
+
+   entry := git_tree_entry_byname(tree, 'README');
+   must_be_true(entry <> nil);
+
+   must_be_true(StrComp(git_tree_entry_name(entry), 'README') = 0);
+
+   must_pass(git_tree_entry_2object(obj, entry));
 
    git_repository_free(repo);
 end;

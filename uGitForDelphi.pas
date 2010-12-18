@@ -847,6 +847,24 @@ var
    // GIT_EXTERN(int) git_object_write(git_object *object);
    git_object_write:             function (object_: Pgit_object): Integer cdecl;
 
+   // GIT_EXTERN(int) git_tree_lookup(git_tree **tree, git_repository *repo, const git_oid *id);
+   git_tree_lookup:              function (var tree: Pgit_tree; repo: Pgit_repository; const id: Pgit_oid): Integer cdecl;
+
+   // GIT_EXTERN(git_tree_entry *) git_tree_entry_byname(git_tree *tree, const char *filename);
+   git_tree_entry_byname:        function (tree: Pgit_tree; const filename: PAnsiChar): Pgit_tree_entry cdecl;
+
+   // GIT_EXTERN(git_tree_entry *) git_tree_entry_byindex(git_tree *tree, int idx);
+   git_tree_entry_byindex:       function (tree: Pgit_tree; idx: Integer): Pgit_tree_entry cdecl;
+
+   // GIT_EXTERN(size_t) git_tree_entrycount(git_tree *tree);
+   git_tree_entrycount:          function (tree: Pgit_tree): size_t cdecl;
+
+   // GIT_EXTERN(const char *) git_tree_entry_name(git_tree_entry *entry);
+   git_tree_entry_name:          function (entry: Pgit_tree_entry): PAnsiChar cdecl;
+
+   // GIT_EXTERN(int) git_tree_entry_2object(git_object **object, git_tree_entry *entry);
+   git_tree_entry_2object:       function (var object_: Pgit_object; entry: Pgit_tree_entry): Integer cdecl;
+
 implementation
 
 var
@@ -861,9 +879,11 @@ begin
     begin
       git_repository_open        := GetProcAddress(libgit2, 'git_repository_open');
       git_repository_free        := GetProcAddress(libgit2, 'git_repository_free');
+
       git_oid_mkstr              := GetProcAddress(libgit2, 'git_oid_mkstr');
       git_oid_fmt                := GetProcAddress(libgit2, 'git_oid_fmt');
       git_oid_pathfmt            := GetProcAddress(libgit2, 'git_oid_pathfmt');
+
       git_commit_lookup          := GetProcAddress(libgit2, 'git_commit_lookup');
       git_commit_message_short   := GetProcAddress(libgit2, 'git_commit_message_short');
       git_commit_message         := GetProcAddress(libgit2, 'git_commit_message');
@@ -872,25 +892,37 @@ begin
       git_commit_time            := GetProcAddress(libgit2, 'git_commit_time');
       git_commit_parentcount     := GetProcAddress(libgit2, 'git_commit_parentcount');
       git_commit_parent          := GetProcAddress(libgit2, 'git_commit_parent');
+
       git_revwalk_new            := GetProcAddress(libgit2, 'git_revwalk_new');
       git_revwalk_free           := GetProcAddress(libgit2, 'git_revwalk_free');
       git_revwalk_sorting        := GetProcAddress(libgit2, 'git_revwalk_sorting');
       git_revwalk_push           := GetProcAddress(libgit2, 'git_revwalk_push');
       git_revwalk_next           := GetProcAddress(libgit2, 'git_revwalk_next');
+
       git_index_open_bare        := GetProcAddress(libgit2, 'git_index_open_bare');
       git_index_read             := GetProcAddress(libgit2, 'git_index_read');
       git_index_free             := GetProcAddress(libgit2, 'git_index_free');
       git_index_find             := GetProcAddress(libgit2, 'git_index_find');
       git_index_entrycount       := GetProcAddress(libgit2, 'git_index_entrycount');
+
       git_tag_lookup             := GetProcAddress(libgit2, 'git_tag_lookup');
       git_tag_name               := GetProcAddress(libgit2, 'git_tag_name');
       git_tag_type               := GetProcAddress(libgit2, 'git_tag_type');
       git_tag_target             := GetProcAddress(libgit2, 'git_tag_target');
       git_tag_id                 := GetProcAddress(libgit2, 'git_tag_id');
       git_tag_set_name           := GetProcAddress(libgit2, 'git_tag_set_name');
+
       git_commit_id              := GetProcAddress(libgit2, 'git_commit_id');
+
       git_object_id              := GetProcAddress(libgit2, 'git_object_id');
       git_object_write           := GetProcAddress(libgit2, 'git_object_write');
+
+      git_tree_lookup            := GetProcAddress(libgit2, 'git_tree_lookup');
+      git_tree_entry_byname      := GetProcAddress(libgit2, 'git_tree_entry_byname');
+      git_tree_entry_byindex     := GetProcAddress(libgit2, 'git_tree_entry_byindex');
+      git_tree_entrycount        := GetProcAddress(libgit2, 'git_tree_entrycount');
+      git_tree_entry_name        := GetProcAddress(libgit2, 'git_tree_entry_name');
+      git_tree_entry_2object     := GetProcAddress(libgit2, 'git_tree_entry_2object');
     end;
   end;
 
@@ -906,9 +938,11 @@ begin
 
     git_repository_open          := nil;
     git_repository_free          := nil;
+
     git_oid_mkstr                := nil;
     git_oid_fmt                  := nil;
     git_oid_pathfmt              := nil;
+
     git_commit_lookup            := nil;
     git_commit_message_short     := nil;
     git_commit_message           := nil;
@@ -917,25 +951,37 @@ begin
     git_commit_time              := nil;
     git_commit_parentcount       := nil;
     git_commit_parent            := nil;
+
     git_revwalk_new              := nil;
     git_revwalk_free             := nil;
     git_revwalk_sorting          := nil;
     git_revwalk_push             := nil;
     git_revwalk_next             := nil;
+
     git_index_open_bare          := nil;
     git_index_read               := nil;
     git_index_free               := nil;
     git_index_find               := nil;
     git_index_entrycount         := nil;
+
     git_tag_lookup               := nil;
     git_tag_name                 := nil;
     git_tag_type                 := nil;
     git_tag_target               := nil;
     git_tag_id                   := nil;
     git_tag_set_name             := nil;
+
     git_commit_id                := nil;
+
     git_object_id                := nil;
     git_object_write             := nil;
+
+    git_tree_lookup              := nil;
+    git_tree_entry_byname        := nil;
+    git_tree_entry_byindex       := nil;
+    git_tree_entrycount          := nil;
+    git_tree_entry_name          := nil;
+    git_tree_entry_2object       := nil;
   end;
 end;
 
