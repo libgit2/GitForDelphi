@@ -31,9 +31,9 @@ type
 implementation
 
 const
-   REPOSITORY_FOLDER_         = 'testrepo.git/';
-   TEST_INDEX_PATH            = 'testrepo.git/index';
-   TEST_INDEX2_PATH           = 'gitgit.index';
+   REPOSITORY_FOLDER_         = 'resources/testrepo.git/';
+   TEST_INDEX_PATH            = 'resources/testrepo.git/index';
+   TEST_INDEX2_PATH           = 'resources/gitgit.index';
    TEST_INDEX_ENTRY_COUNT     = 109;
    TEST_INDEX2_ENTRY_COUNT    = 1437;
 
@@ -199,7 +199,7 @@ procedure TTestsFromLibGit2.must_pass(aResult: Integer);
       end;
    end;
 begin
-   if not aResult = GIT_SUCCESS then
+   if aResult <> GIT_SUCCESS then
    begin
       CheckEquals('GIT_SUCCESS', GitReturnValue);
    end;
@@ -292,13 +292,13 @@ var
    parents, p:              UInt;
    parent:                  Pgit_commit;
 begin
-   git_repository_open(repo, REPOSITORY_FOLDER);
+   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
    for i := Low(commit_ids) to High(commit_ids) do
    begin
       git_oid_mkstr(@id, PAnsiChar(commit_ids[i]));
 
-      git_commit_lookup(commit, repo, @id);
+      must_pass(git_commit_lookup(commit, repo, @id));
 
       message_       := git_commit_message(commit);
       message_short  := git_commit_message_short(commit);
@@ -461,34 +461,30 @@ begin
    repo := nil;
    head := nil;
 
-   git_repository_open(repo, REPOSITORY_FOLDER);
+   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
-   git_revwalk_new(walk, repo);
+   must_pass(git_revwalk_new(walk, repo));
 
    git_oid_mkstr(@id, commit_head);
 
-   git_commit_lookup(head, repo, @id);
+   must_pass(git_commit_lookup(head, repo, @id));
 
-   CheckEquals(GIT_SUCCESS,
-      test_walk(walk, head,
+   must_pass(test_walk(walk, head,
             GIT_SORT_TIME,
             commit_sorting_time, 1)
    );
 
-   CheckEquals(GIT_SUCCESS,
-      test_walk(walk, head,
+   must_pass(test_walk(walk, head,
             GIT_SORT_TOPOLOGICAL,
             commit_sorting_topo, 2)
    );
 
-   CheckEquals(GIT_SUCCESS,
-      test_walk(walk, head,
+   must_pass(test_walk(walk, head,
             GIT_SORT_TIME or GIT_SORT_REVERSE,
             commit_sorting_time_reverse, 1)
    );
 
-   CheckEquals(GIT_SUCCESS,
-      test_walk(walk, head,
+   must_pass(test_walk(walk, head,
             GIT_SORT_TOPOLOGICAL or GIT_SORT_REVERSE,
             commit_sorting_topo_reverse, 2)
    );
