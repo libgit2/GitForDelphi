@@ -63,7 +63,7 @@ const
 
 function REPOSITORY_FOLDER: PAnsiChar;
 begin
-   Result := PAnsiChar(ExtractFilePath(ParamStr(0)) + REPOSITORY_FOLDER_);
+   Result := PAnsiChar(AnsiString(ExtractFilePath(ParamStr(0)) + REPOSITORY_FOLDER_));
 end;
 
 function git_oid_cmp(const a, b: Pgit_oid): Integer;
@@ -111,8 +111,8 @@ begin
    Inc(ptr, GIT_OID_HEXSZ + 1);
    ptr^ := #0;
 
-   dwAttrs := GetFileAttributes(full_path);
-   if SetFileAttributes(full_path, dwAttrs and (not FILE_ATTRIBUTE_READONLY)) and (not DeleteFile(full_path)) then
+   dwAttrs := GetFileAttributesA(full_path);
+   if SetFileAttributesA(full_path, dwAttrs and (not FILE_ATTRIBUTE_READONLY)) and (not DeleteFileA(full_path)) then
    begin
       raise Exception.CreateFmt('can''t delete object file "%s"', [full_path]);
       Result := -1;
@@ -121,7 +121,7 @@ begin
 
    top_folder^ := #0;
 
-   if (not RemoveDirectory(full_path)) and (GetLastError <> ERROR_DIR_NOT_EMPTY) then
+   if (not RemoveDirectoryA(full_path)) and (GetLastError <> ERROR_DIR_NOT_EMPTY) then
    begin
       raise Exception.CreateFmt('can''t remove object directory "%s"', [full_path]);
       Result := -1;
@@ -137,13 +137,13 @@ end;
 
 procedure TTestsFromLibGit2.index_load_test_0601;
 var
-   path: String;
+   path: AnsiString;
    index: Pgit_index;
    i, offset: Integer;
    entries: PPgit_index_entry;
    e: Pgit_index_entry;
 begin
-   path := StringReplace(ExtractFilePath(ParamStr(0)) + TEST_INDEX_PATH, '/', '\', [rfReplaceAll]);
+   path := AnsiString(StringReplace(ExtractFilePath(ParamStr(0)) + TEST_INDEX_PATH, '/', '\', [rfReplaceAll]));
 
    must_pass(git_index_open_bare(index, PAnsiChar(path)));
 
@@ -273,7 +273,7 @@ end;
 
 procedure TTestsFromLibGit2.query_details_test_0402;
 const
-   commit_ids: array[0..5] of string = (
+   commit_ids: array[0..5] of AnsiString = (
       'a4a7dce85cf63874e984719f4fdd239f5145052f', { 0 }
       '9fd738e8f7967c078dceed8190330fc8648ee56a', { 1 }
       '4a202b346bb0fb0db7eff3cffeb3c70babbd2045', { 2 }
@@ -287,7 +287,7 @@ var
    id:                      git_oid;
    commit:                  Pgit_commit;
    author, committer:       Pgit_person;
-   message_, message_short: String;
+   message_, message_short: AnsiString;
    commit_time:             time_t;
    parents, p:              UInt;
    parent:                  Pgit_commit;
@@ -307,12 +307,12 @@ begin
       commit_time    := git_commit_time(commit);
       parents        := git_commit_parentcount(commit);
 
-      CheckTrue(CompareStr(author.name,      'Scott Chacon') = 0);
-      CheckTrue(CompareStr(author.email,     'schacon@gmail.com') = 0);
-      CheckTrue(CompareStr(committer.name,   'Scott Chacon') = 0);
-      CheckTrue(CompareStr(committer.email,  'schacon@gmail.com') = 0);
-      CheckTrue(Pos(#10, message_) > 0);
-      CheckTrue(Pos(#10, message_short) = 0);
+      CheckTrue(StrComp(author.name,      'Scott Chacon') = 0);
+      CheckTrue(StrComp(author.email,     'schacon@gmail.com') = 0);
+      CheckTrue(StrComp(committer.name,   'Scott Chacon') = 0);
+      CheckTrue(StrComp(committer.email,  'schacon@gmail.com') = 0);
+      CheckTrue(Pos(#10, String(message_)) > 0);
+      CheckTrue(Pos(#10, String(message_short)) = 0);
       CheckTrue(commit_time > 0);
 
       CheckTrue(parents <= 2, 'parents <= 2');
@@ -366,7 +366,7 @@ type
    TArray6 = array[0..5] of Integer;
 const
    commit_head = 'a4a7dce85cf63874e984719f4fdd239f5145052f';
-   commit_ids: array[0..5] of string = (
+   commit_ids: array[0..5] of AnsiString = (
       'a4a7dce85cf63874e984719f4fdd239f5145052f', { 0 }
       '9fd738e8f7967c078dceed8190330fc8648ee56a', { 1 }
       '4a202b346bb0fb0db7eff3cffeb3c70babbd2045', { 2 }
@@ -606,7 +606,7 @@ var
    tree: Pgit_tree;
    i: Integer;
    entry_id: git_oid;
-   filename: String;
+   filename: AnsiString;
 begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
    must_pass(git_tree_new(tree, repo));
@@ -614,7 +614,7 @@ begin
    git_oid_mkstr(@entry_id, tree_oid);
    for i := 0 to entry_count - 1 do
    begin
-      filename := Format('file%d.txt', [i]);
+      filename := AnsiString(Format('file%d.txt', [i]));
       must_pass(git_tree_add_entry(tree, @entry_id, PAnsiChar(filename), OctalToInt('040000')));
    end;
 
