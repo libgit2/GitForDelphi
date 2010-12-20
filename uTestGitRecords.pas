@@ -20,6 +20,9 @@ type
       procedure Test_git_vector;
       procedure Test_pack_backend;
       procedure Test_git_odb_backend;
+      procedure Test_git_commit;
+      procedure Test_git_time;
+      procedure Test_git_signature;
    end;
 
 implementation
@@ -28,6 +31,32 @@ uses
    uGitForDelphi;
 
 { TTestGitRecordSizes }
+
+procedure TTestGitRecords.Test_git_commit;
+   function offsetof(const Value: string): Integer;
+   var
+     item: git_commit;
+   begin
+     if      Value = 'object_'            then Result := Integer(@item.object_) - Integer(@item)
+     else if Value = 'parents'            then Result := Integer(@item.parents) - Integer(@item)
+     else if Value = 'tree'               then Result := Integer(@item.tree) - Integer(@item)
+     else if Value = 'author'             then Result := Integer(@item.author) - Integer(@item)
+     else if Value = 'committer'          then Result := Integer(@item.committer) - Integer(@item)
+     else if Value = 'message_'           then Result := Integer(@item.message_) - Integer(@item)
+     else if Value = 'message_short'      then Result := Integer(@item.message_short) - Integer(@item)
+     else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
+   end;
+begin
+   CheckEquals(96, sizeof(git_commit),             'git_commit');
+
+   CheckEquals(  0, offsetof('object_'),           'object_');
+   CheckEquals( 52, offsetof('parents'),           'parents');
+   CheckEquals( 72, offsetof('tree'),              'tree');
+   CheckEquals( 76, offsetof('author'),            'author');
+   CheckEquals( 80, offsetof('committer'),         'committer');
+   CheckEquals( 84, offsetof('message_'),          'message_');
+   CheckEquals( 88, offsetof('message_short'),     'message_short');
+end;
 
 procedure TTestGitRecords.Test_git_index;
    function offsetof(const Value: string): Integer;
@@ -231,6 +260,24 @@ begin
    CheckEquals( 28, offsetof('sorting'),    'sorting');
 end;
 
+procedure TTestGitRecords.Test_git_signature;
+   function offsetof(const Value: string): Integer;
+   var
+     item: git_signature;
+   begin
+     if      Value = 'name'               then Result := Integer(@item.name) - Integer(@item)
+     else if Value = 'email'              then Result := Integer(@item.email) - Integer(@item)
+     else if Value = 'when'               then Result := Integer(@item.when) - Integer(@item)
+     else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
+   end;
+begin
+   CheckEquals( 24, sizeof(git_signature),         'git_signature size');
+
+   CheckEquals(  0, offsetof('name'),              'name');
+   CheckEquals(  4, offsetof('email'),             'email');
+   CheckEquals(  8, offsetof('when'),              'when');
+end;
+
 procedure TTestGitRecords.Test_git_tag;
    function offsetof(const Value: string): Integer;
    var
@@ -253,6 +300,22 @@ begin
    CheckEquals( 60, offsetof('tag_name'),          'tag_name');
    CheckEquals( 64, offsetof('tagger'),            'tagger');
    CheckEquals( 68, offsetof('message_'),          'message_');
+end;
+
+procedure TTestGitRecords.Test_git_time;
+   function offsetof(const Value: string): Integer;
+   var
+     item: git_time;
+   begin
+     if      Value = 'time'               then Result := Integer(@item.time) - Integer(@item)
+     else if Value = 'offset'             then Result := Integer(@item.offset) - Integer(@item)
+     else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
+   end;
+begin
+   CheckEquals( 16, sizeof(git_time),              'git_time size');
+
+   CheckEquals(  0, offsetof('time'),              'time');
+   CheckEquals(  8, offsetof('offset'),            'offset');
 end;
 
 procedure TTestGitRecords.Test_git_vector;
@@ -316,8 +379,6 @@ begin
    CheckEquals( 52, sizeof(git_object),             'git_object');
    CheckEquals( 32, sizeof(git_tree_entry),         'git_tree_entry');
    CheckEquals( 72, sizeof(git_tree),               'git_tree');
-   CheckEquals(112, sizeof(git_commit),             'git_commit');
-   CheckEquals( 16, sizeof(git_person),             'git_person');
    CheckEquals( 12, sizeof(git_revwalk_listnode),   'git_revwalk_listnode');
    CheckEquals( 12, sizeof(git_revwalk_list),       'git_revwalk_list');
    CheckEquals( 24, sizeof(git_revwalk_commit),     'git_revwalk_commit');

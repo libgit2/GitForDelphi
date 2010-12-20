@@ -184,7 +184,7 @@ type
    Pgit_index_entry = ^git_index_entry;
    Pgit_index_tree = ^git_index_tree;
    PPgit_index_tree = ^Pgit_index_tree;
-   Pgit_person = ^git_person;
+   Pgit_signature = ^git_signature;
    Pgit_odb_source = ^git_odb_source;
    Pgit_object = ^git_object;
    Pgit_tree = ^git_tree;
@@ -628,12 +628,11 @@ type
 //   struct git_commit {
 //      git_object object;
 //
-//      time_t commit_time;
 //      git_vector parents;
 //
 //      git_tree *tree;
-//      git_person *author;
-//      git_person *committer;
+//      git_signature *author;
+//      git_signature *committer;
 //
 //      char *message;
 //      char *message_short;
@@ -643,12 +642,11 @@ type
    git_commit = record
       object_:                                           git_object;
 
-      commit_time:                                       time_t;
       parents:                                           git_vector;
 
       tree:                                              Pgit_tree;
-      author:                                            Pgit_person;
-      committer:                                         Pgit_person;
+      author:                                            Pgit_signature;
+      committer:                                         Pgit_signature;
 
       message_:                                          PAnsiChar;
       message_short:                                     PAnsiChar;
@@ -656,15 +654,26 @@ type
       full_parse:                                        UInt;
    end;
 
-//   struct git_person {
-//      char *name; /**< Full name */
-//      char *email; /**< Email address */
-//      time_t time; /**< Time when this person committed the change */
-//   };
-   git_person = record
+//   /** Time in a signature */
+//   typedef struct git_time {
+//      time_t time; /** time in seconds from epoch */
+//      int offset; /** timezone offset, in minutes */
+//   } git_time;
+   git_time = record
+      time:                                              time_t;
+      offset:                                            Integer;
+   end;
+
+//   /** An action signature (e.g. for committers, taggers, etc) */
+//   typedef struct git_signature {
+//      char *name; /** full name of the author */
+//      char *email; /** email of the author */
+//      git_time when; /** time when the action happened */
+//   } git_signature;
+   git_signature = record
       name:                                              PAnsiChar;
       email:                                             PAnsiChar;
-      time:                                              time_t;
+      when:                                              git_time;
    end;
 
 //   typedef struct git_revwalk_listnode {
@@ -737,7 +746,7 @@ type
 //      git_object *target;
 //      git_otype type;
 //      char *tag_name;
-//      git_person *tagger;
+//      git_signature *tagger;
 //      char *message;
 //   };
    git_tag = record
@@ -746,7 +755,7 @@ type
       target:                                            Pgit_object;
       type_:                                             git_otype;
       tag_name:                                          PAnsiChar;
-      tagger:                                            Pgit_person;
+      tagger:                                            Pgit_signature;
       message_:                                          PAnsiChar;
    end;
 
@@ -775,11 +784,11 @@ var
    // GIT_EXTERN(const char *) git_commit_message(git_commit *commit);
    git_commit_message:              function (commit: Pgit_commit): PAnsiChar cdecl;
 
-   // GIT_EXTERN(const git_person *) git_commit_author(git_commit *commit);
-   git_commit_author:               function (commit: Pgit_commit): Pgit_person cdecl;
+   // GIT_EXTERN(const git_signature *) git_commit_author(git_commit *commit);
+   git_commit_author:               function (commit: Pgit_commit): Pgit_signature cdecl;
 
-   // GIT_EXTERN(const git_person *) git_commit_committer(git_commit *commit);
-   git_commit_committer:            function (commit: Pgit_commit): Pgit_person cdecl;
+   // GIT_EXTERN(const git_signature *) git_commit_committer(git_commit *commit);
+   git_commit_committer:            function (commit: Pgit_commit): Pgit_signature cdecl;
 
    // GIT_EXTERN(time_t) git_commit_time(git_commit *commit);
    git_commit_time:                 function (commit: Pgit_commit): time_t cdecl;

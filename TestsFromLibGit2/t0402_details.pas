@@ -30,7 +30,7 @@ var
    repo:                    Pgit_repository;
    id:                      git_oid;
    commit:                  Pgit_commit;
-   author, committer:       Pgit_person;
+   author, committer:       Pgit_signature;
    message_, message_short: AnsiString;
    commit_time:             time_t;
    parents, p:              UInt;
