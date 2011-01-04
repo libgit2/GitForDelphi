@@ -3,11 +3,14 @@ GitForDelphi
 Delphi bindings to libgit2 <https://github.com/libgit2/libgit2>
 
 
-Header conversion started, some minimal tests are passing.
+All function exports from git2.dll have been converted, including
+necessary structures. Some of the tests from libgit2 have been
+converted and are all passing.
 
 git2.dll built from Visual C++ 2010 Express is in the `binary` branch,
 you can use it while in the master branch like this
 
     git checkout binary -- git2.dll; git reset git2.dll
 
-The dll and code are currently based on the `40c44d2` commit of libgit2.git
+The dll and code are currently based on the `2645053` commit of libgit2.git
+
