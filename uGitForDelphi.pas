@@ -1062,7 +1062,7 @@ begin
 end;
 
 function InitLibgit2: Boolean;
-   function Bind(const aName: String): Pointer;
+   function Bind(const aName: AnsiString): Pointer;
    begin
       Result := GetProcAddress(libgit2, PAnsiChar(aName));
       {$IFDEF DEBUG}
