@@ -414,12 +414,12 @@ type
    end;
 
 //   typedef struct {
-//      time_t seconds;
-//      time_t nanoseconds;
+//      unsigned int seconds;
+//      unsigned int nanoseconds;
 //   } git_index_time;
    git_index_time = record
-      seconds:                                           time_t;
-      nanoseconds:                                       time_t;
+      seconds:                                           UInt;
+      nanoseconds:                                       UInt;
    end;
 
 //   typedef struct git_index_entry {
@@ -431,7 +431,7 @@ type
 //      unsigned int mode;
 //      unsigned int uid;
 //      unsigned int gid;
-//      off_t file_size;
+//      unsigned int file_size;
 //
 //      git_oid oid;
 //
@@ -449,7 +449,7 @@ type
       mode:                                              UInt;
       uid:                                               UInt;
       gid:                                               UInt;
-      file_size:                                         off_t;
+      file_size:                                         UInt;
 
       oid:                                               git_oid;
 
