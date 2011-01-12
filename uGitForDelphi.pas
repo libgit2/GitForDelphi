@@ -1065,6 +1065,15 @@ begin
    Result := git_repository_newobject(Pgit_object(tree), repo, GIT_OBJ_TREE);
 end;
 
+function TEMP_git_commit_timezone_offset(commit: Pgit_commit): Integer cdecl;
+begin
+   // temporary function, to be removed when libgit2 exposes git_commit_timezone_offset
+//   assert(commit && commit->committer);
+//   return commit->committer->when.offset;
+   Assert(Assigned(commit) and Assigned(commit.committer));
+   Result := commit.committer.when.offset;
+end;
+
 function InitLibgit2: Boolean;
    function Bind(const aName: AnsiString): Pointer;
    begin
@@ -1097,6 +1106,7 @@ begin
       git_commit_parent                         := Bind('git_commit_parent');
       git_commit_id                             := Bind('git_commit_id');
 //      git_commit_timezone_offset                := Bind('git_commit_timezone_offset'); {TODO : libgit2 has a typo, named git_commit_time_offset in commit.c}
+      git_commit_timezone_offset                := @TEMP_git_commit_timezone_offset;
       git_commit_tree                           := Bind('git_commit_tree');
       git_commit_add_parent                     := Bind('git_commit_add_parent');
       git_commit_set_message                    := Bind('git_commit_set_message');
