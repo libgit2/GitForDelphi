@@ -364,12 +364,13 @@ procedure TTestGitRecords.Test_sizes;
 begin
    CheckEquals(  4, sizeof(size_t),                 'size_t');
    CheckEquals(  8, sizeof(time_t),                 'time_t');
-   CheckEquals(  8, sizeof(off_t),                  'off_t');
+   CheckEquals(  8, sizeof(git_time_t),             'git_time_t');
+   CheckEquals(  8, sizeof(git_off_t),              'git_off_t');
    CheckEquals(  4, sizeof(git_file),               'git_file');
    CheckEquals(  4, sizeof(git_lck),                'git_lck');
    CheckEquals( 20, sizeof(git_oid),                'git_oid');
-   CheckEquals(  8, sizeof(git_index_time),         'git_index_time');
-   CheckEquals( 68, sizeof(git_index_entry),        'git_index_entry');
+   CheckEquals( 16, sizeof(git_index_time),         'git_index_time');
+   CheckEquals( 96, sizeof(git_index_entry),        'git_index_entry');
    CheckEquals( 40, sizeof(git_index_tree),         'git_index_tree');
    CheckEquals( 48, sizeof(git_index),              'git_index');
    CheckEquals( 12, sizeof(git_hashtable_node),     'git_hashtable_node');

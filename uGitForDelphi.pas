@@ -147,7 +147,10 @@ const
 type
    size_t   = LongWord;
    time_t   = Int64;
-   off_t    = Int64;
+   off_t = Int64;
+   git_off_t = Int64;  //  typedef __int64 git_off_t;
+   git_time_t = Int64; //  typedef __time64_t git_time_t;
+
    git_otype = Integer; // enum as constants above
 
    git_file = Integer;
@@ -414,11 +417,12 @@ type
    end;
 
 //   typedef struct {
-//      unsigned int seconds;
+//      git_time_t seconds;
+//      /* nsec should not be stored as time_t compatible */
 //      unsigned int nanoseconds;
 //   } git_index_time;
    git_index_time = record
-      seconds:                                           UInt;
+      seconds:                                           git_time_t;
       nanoseconds:                                       UInt;
    end;
 
@@ -431,7 +435,7 @@ type
 //      unsigned int mode;
 //      unsigned int uid;
 //      unsigned int gid;
-//      unsigned int file_size;
+//      git_off_t file_size;
 //
 //      git_oid oid;
 //
@@ -449,7 +453,7 @@ type
       mode:                                              UInt;
       uid:                                               UInt;
       gid:                                               UInt;
-      file_size:                                         UInt;
+      file_size:                                         git_off_t;
 
       oid:                                               git_oid;
 

@@ -12,5 +12,5 @@ you can use it while in the master branch like this
 
     git checkout binary -- git2.dll; git reset git2.dll
 
-The dll and code are currently based on the `2645053` commit of libgit2.git
+The dll and code are currently based on the `e52e38d` commit of libgit2.git
 
