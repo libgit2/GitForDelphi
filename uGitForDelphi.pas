@@ -1015,6 +1015,10 @@ function git_tag_new(var tag: Pgit_tag; repo: Pgit_repository): Integer cdecl;
 function git_tree_lookup(var tree: Pgit_tree; repo: Pgit_repository; const id: Pgit_oid): Integer cdecl;
 function git_tree_new(var tree: Pgit_tree; repo: Pgit_repository): Integer cdecl;
 
+// Helpers
+function time_t__to__TDateTime(t: time_t; const aAdjustMinutes: Integer = 0): TDateTime;
+function git_commit_DateTime(commit: Pgit_commit): TDateTime;
+
 implementation
 
 var
@@ -1066,6 +1070,26 @@ function git_tree_new(var tree: Pgit_tree; repo: Pgit_repository): Integer cdecl
 begin
    // return git_repository_newobject((git_object **)tree, repo, GIT_OBJ_TREE);
    Result := git_repository_newobject(Pgit_object(tree), repo, GIT_OBJ_TREE);
+end;
+
+function time_t__to__TDateTime(t: time_t; const aAdjustMinutes: Integer = 0): TDateTime;
+const
+   UnixStartDate: TDateTime = 25569.0; // 01/01/1970
+begin
+   Result := (t / SecsPerDay) + UnixStartDate;                          //   Result := DateUtils.IncSecond(EncodeDate(1970,1,1), t);
+   if aAdjustMinutes <> 0 then
+      Result := ((Result * MinsPerDay) + aAdjustMinutes) / MinsPerDay;  //      Result := DateUtils.IncMinute(Result, aAdjustMinutes);
+end;
+
+function git_commit_DateTime(commit: Pgit_commit): TDateTime;
+var
+   t: time_t;
+   time_offset: Integer;
+begin
+   t := git_commit_time(commit);
+   time_offset := git_commit_time_offset(commit);
+
+   Result := time_t__to__TDateTime(t, time_offset);
 end;
 
 function InitLibgit2: Boolean;

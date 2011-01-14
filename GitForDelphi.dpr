@@ -28,7 +28,8 @@ uses
   t0801_readtag in 'TestsFromLibGit2\t0801_readtag.pas',
   t0802_write in 'TestsFromLibGit2\t0802_write.pas',
   t0901_readtree in 'TestsFromLibGit2\t0901_readtree.pas',
-  t0902_modify in 'TestsFromLibGit2\t0902_modify.pas';
+  t0902_modify in 'TestsFromLibGit2\t0902_modify.pas',
+  uTestHelpers in 'uTestHelpers.pas';
 
 {$R *.RES}
 
