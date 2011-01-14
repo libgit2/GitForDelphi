@@ -812,8 +812,8 @@ var
    git_commit_parentcount:             function (commit: Pgit_commit): UInt cdecl;
    // GIT_EXTERN(git_commit *) git_commit_parent(git_commit *commit, unsigned int n);
    git_commit_parent:                  function (commit: Pgit_commit; n: UInt): Pgit_commit cdecl;
-   // GIT_EXTERN(int) git_commit_timezone_offset(git_commit *commit);
-   git_commit_timezone_offset:         function (commit: Pgit_commit): Integer cdecl;
+   // GIT_EXTERN(int) git_commit_time_offset(git_commit *commit);
+   git_commit_time_offset:         function (commit: Pgit_commit): Integer cdecl;
    // GIT_EXTERN(const git_tree *) git_commit_tree(git_commit *commit);
    git_commit_tree:                    function (commit: Pgit_commit): Pgit_tree cdecl;
    // GIT_EXTERN(int) git_commit_add_parent(git_commit *commit, git_commit *new_parent);
@@ -914,6 +914,9 @@ var
    git_repository_free:                procedure (repo: Pgit_repository) cdecl;
    // GIT_EXTERN(int) git_repository_open2(git_repository **repository, const char *git_dir, const char *git_object_directory, const char *git_index_file, const char *git_work_tree);
    git_repository_open2:               function (var repository: Pgit_repository; const git_dir, git_object_directory, git_index_file, git_work_tree: PAnsiChar): Integer cdecl;
+   // GIT_EXTERN(int) git_repository_open3(git_repository **repository, const char *git_dir, git_odb *object_database, const char *git_index_file, const char *git_work_tree);
+   git_repository_open3:               function (var repository: Pgit_repository; const git_dir: PAnsiChar; object_database: Pgit_odb; const git_index_file, git_work_tree: PAnsiChar): Integer cdecl;
+
    // GIT_EXTERN(int) git_repository_lookup(git_object **object, git_repository *repo, const git_oid *id, git_otype type);
    git_repository_lookup:              function (var object_: Pgit_object; repo: Pgit_repository; const id: Pgit_oid; type_: git_otype): Integer cdecl;
    // GIT_EXTERN(git_odb *) git_repository_database(git_repository *repo);
@@ -1065,15 +1068,6 @@ begin
    Result := git_repository_newobject(Pgit_object(tree), repo, GIT_OBJ_TREE);
 end;
 
-function TEMP_git_commit_timezone_offset(commit: Pgit_commit): Integer cdecl;
-begin
-   // temporary function, to be removed when libgit2 exposes git_commit_timezone_offset
-//   assert(commit && commit->committer);
-//   return commit->committer->when.offset;
-   Assert(Assigned(commit) and Assigned(commit.committer));
-   Result := commit.committer.when.offset;
-end;
-
 function InitLibgit2: Boolean;
    function Bind(const aName: AnsiString): Pointer;
    begin
@@ -1105,8 +1099,7 @@ begin
       git_commit_parentcount                    := Bind('git_commit_parentcount');
       git_commit_parent                         := Bind('git_commit_parent');
       git_commit_id                             := Bind('git_commit_id');
-//      git_commit_timezone_offset                := Bind('git_commit_timezone_offset'); {TODO : libgit2 has a typo, named git_commit_time_offset in commit.c}
-      git_commit_timezone_offset                := @TEMP_git_commit_timezone_offset;
+      git_commit_time_offset                    := Bind('git_commit_time_offset');
       git_commit_tree                           := Bind('git_commit_tree');
       git_commit_add_parent                     := Bind('git_commit_add_parent');
       git_commit_set_message                    := Bind('git_commit_set_message');
@@ -1161,6 +1154,7 @@ begin
       git_repository_open                       := Bind('git_repository_open');
       git_repository_free                       := Bind('git_repository_free');
       git_repository_open2                      := Bind('git_repository_open2');
+      git_repository_open3                      := Bind('git_repository_open3');
       git_repository_lookup                     := Bind('git_repository_lookup');
       git_repository_database                   := Bind('git_repository_database');
       git_repository_index                      := Bind('git_repository_index');
@@ -1235,7 +1229,7 @@ begin
     git_commit_parentcount                    := nil;
     git_commit_parent                         := nil;
     git_commit_id                             := nil;
-    git_commit_timezone_offset                := nil;
+    git_commit_time_offset                    := nil;
     git_commit_tree                           := nil;
     git_commit_add_parent                     := nil;
     git_commit_set_message                    := nil;
@@ -1290,6 +1284,7 @@ begin
     git_repository_open                       := nil;
     git_repository_free                       := nil;
     git_repository_open2                      := nil;
+    git_repository_open3                      := nil;
     git_repository_lookup                     := nil;
     git_repository_database                   := nil;
     git_repository_index                      := nil;
