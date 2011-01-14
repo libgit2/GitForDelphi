@@ -45,7 +45,6 @@ const
    );
 
 function REPOSITORY_FOLDER: PAnsiChar;
-function git_oid_cmp(const a, b: Pgit_oid): Integer;
 function OctalToInt(const Value: string): Longint;
 
 implementation
@@ -53,14 +52,6 @@ implementation
 function REPOSITORY_FOLDER: PAnsiChar;
 begin
    Result := PAnsiChar(AnsiString(ExtractFilePath(ParamStr(0)) + REPOSITORY_FOLDER_));
-end;
-
-function git_oid_cmp(const a, b: Pgit_oid): Integer;
-begin
-   if CompareMem(@a.id, @b.id, sizeof(a.id)) then
-      Result := 0
-   else
-      Result := 1;
 end;
 
 function OctalToInt(const Value: string): Longint;
