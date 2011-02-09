@@ -25,6 +25,7 @@ var
    i: Integer;
    entry_id: git_oid;
    filename: AnsiString;
+   ent: Pgit_tree_entry;
 begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
    must_pass(git_tree_new(tree, repo));
@@ -33,7 +34,9 @@ begin
    for i := 0 to entry_count - 1 do
    begin
       filename := AnsiString(Format('file%d.txt', [i]));
-      must_pass(git_tree_add_entry(tree, @entry_id, PAnsiChar(filename), OctalToInt('040000')));
+      ent := nil;
+      must_pass(git_tree_add_entry(ent, tree, @entry_id, PAnsiChar(filename), OctalToInt('040000')));
+      must_be_true(ent <> nil);
    end;
 
    must_be_true(git_tree_entrycount(tree) = entry_count);
@@ -53,6 +56,7 @@ var
    entry: Pgit_tree_entry;
    i: Integer;
 //   hex_oid: array [0..40] of AnsiChar;
+   ent: Pgit_tree_entry;
 begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
@@ -62,8 +66,8 @@ begin
 
    must_be_true(git_tree_entrycount(tree) = 3);
 
-   git_tree_add_entry(tree, @id, 'zzz_test_entry.dat', 0);
-   git_tree_add_entry(tree, @id, '01_test_entry.txt', 0);
+   git_tree_add_entry(ent, tree, @id, 'zzz_test_entry.dat', 0);
+   git_tree_add_entry(ent, tree, @id, '01_test_entry.txt', 0);
 
    must_be_true(git_tree_entrycount(tree) = 5);
 

@@ -23,6 +23,7 @@ type
       procedure Test_git_commit;
       procedure Test_git_time;
       procedure Test_git_signature;
+      procedure Test_git_reference;
    end;
 
 implementation
@@ -234,6 +235,37 @@ begin
    CheckEquals(  8, offsetof('type_'),     'type_');
 end;
 
+procedure TTestGitRecords.Test_git_reference;
+   function offsetof(const Value: string): Integer;
+   var
+      item: git_reference;
+   begin
+      if Value = 'owner'                  then  Result := Integer(@item.owner) - Integer(@item)
+      else if Value = 'type_'             then  Result := Integer(@item.type_) - Integer(@item)
+      else if Value = 'name'              then  Result := Integer(@item.name) - Integer(@item)
+
+      else if Value = 'packedAndModified' then  Result := Integer(@item.packedAndModified) - Integer(@item)
+
+//      else if Value = 'target'            then  Result := Integer(@item.target) - Integer(@item)
+//      else if Value = 'ref'               then  Result := Integer(@item.ref) - Integer(@item)
+      else if Value = 'oid'               then  Result := Integer(@item.oid) - Integer(@item)
+
+      else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
+   end;
+begin
+   // Variant record doesn't seem to be equivalent to C union in a struct (the sizeof was 40 in Delphi),
+   // so ignoring the "char *ref;" member for now.
+   CheckEquals( 36, sizeof(git_reference),  'git_reference size');
+
+   CheckEquals(  0, offsetof('owner'),      'owner');
+   CheckEquals(  4, offsetof('type_'),      'type_');
+   CheckEquals(  8, offsetof('name'),       'name');
+//   CheckEquals( 16, offsetof('target'),     'target');
+
+//   CheckEquals( 16, offsetof('ref'),        'ref');
+   CheckEquals( 16, offsetof('oid'),        'oid');
+end;
+
 procedure TTestGitRecords.Test_git_revwalk;
    function offsetof(const Value: string): Integer;
    var
@@ -375,14 +407,15 @@ begin
    CheckEquals( 48, sizeof(git_index),              'git_index');
    CheckEquals( 12, sizeof(git_hashtable_node),     'git_hashtable_node');
    CheckEquals( 24, sizeof(git_hashtable),          'git_hashtable');
-   CheckEquals( 32, sizeof(git_repository),         'git_repository');
+   CheckEquals( 40, sizeof(git_repository),         'git_repository');
    CheckEquals( 24, sizeof(git_odb_source),         'git_odb_source');
    CheckEquals( 52, sizeof(git_object),             'git_object');
    CheckEquals( 32, sizeof(git_tree_entry),         'git_tree_entry');
-   CheckEquals( 72, sizeof(git_tree),               'git_tree');
+   CheckEquals( 76, sizeof(git_tree),               'git_tree');
    CheckEquals( 12, sizeof(git_revwalk_listnode),   'git_revwalk_listnode');
    CheckEquals( 12, sizeof(git_revwalk_list),       'git_revwalk_list');
    CheckEquals( 24, sizeof(git_revwalk_commit),     'git_revwalk_commit');
+   CheckEquals(  8, sizeof(git_refcache),           'git_refcache');
 end;
 
 initialization

@@ -76,7 +76,7 @@ const
    var
       commit: Pgit_commit;
 
-      i: Integer;
+      ret, i: Integer;
       result_array: array [0..commit_count-1] of Integer;
    begin
       git_revwalk_sorting(walk, flags);
@@ -86,11 +86,11 @@ const
          result_array[i] := -1;
 
       i := 0;
-      commit := git_revwalk_next(walk);
-      while (commit <> nil) do
+      ret := git_revwalk_next(commit, walk);
+      while (ret = GIT_SUCCESS) do
       begin
          result_array[i] := get_commit_index(commit);
-         commit := git_revwalk_next(walk);
+         ret := git_revwalk_next(commit, walk);
          Inc(i);
       end;
 
