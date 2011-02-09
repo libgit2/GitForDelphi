@@ -8,8 +8,11 @@ uses
 
 type
    TTestFromLibGit2 = class (TTestCase)
+   strict private
+      function GitReturnValue(aResult: Integer): String;
    public
       procedure must_pass(aResult: Integer);
+      procedure must_fail(aResult: Integer; aExpectedResult: Integer = 0);
       procedure must_be_true(b: Boolean; const msg: String = '');
       function remove_loose_object(const aRepository_folder: PAnsiChar; object_: Pgit_object): Integer;
    end;
@@ -65,39 +68,52 @@ end;
 
 { TTestFromLibGit2 }
 
-procedure TTestFromLibGit2.must_pass(aResult: Integer);
-   function GitReturnValue: String;
+procedure TTestFromLibGit2.must_fail(aResult: Integer; aExpectedResult: Integer = 0);
+begin
+   if aExpectedResult <> 0 then
    begin
-      case aResult of
-         GIT_ERROR                  : Result := 'GIT_ERROR';
-         GIT_ENOTOID                : Result := 'GIT_ENOTOID';
-         GIT_ENOTFOUND              : Result := 'GIT_ENOTFOUND';
-         GIT_ENOMEM                 : Result := 'GIT_ENOMEM';
-         GIT_EOSERR                 : Result := 'GIT_EOSERR';
-         GIT_EOBJTYPE               : Result := 'GIT_EOBJTYPE';
-         GIT_EOBJCORRUPTED          : Result := 'GIT_EOBJCORRUPTED';
-         GIT_ENOTAREPO              : Result := 'GIT_ENOTAREPO';
-         GIT_EINVALIDTYPE           : Result := 'GIT_EINVALIDTYPE';
-         GIT_EMISSINGOBJDATA        : Result := 'GIT_EMISSINGOBJDATA';
-         GIT_EPACKCORRUPTED         : Result := 'GIT_EPACKCORRUPTED';
-         GIT_EFLOCKFAIL             : Result := 'GIT_EFLOCKFAIL';
-         GIT_EZLIB                  : Result := 'GIT_EZLIB';
-         GIT_EBUSY                  : Result := 'GIT_EBUSY';
-         GIT_EBAREINDEX             : Result := 'GIT_EBAREINDEX';
-         GIT_EINVALIDREFNAME        : Result := 'GIT_EINVALIDREFNAME';
-         GIT_EREFCORRUPTED          : Result := 'GIT_EREFCORRUPTED';
-         GIT_ETOONESTEDSYMREF       : Result := 'GIT_ETOONESTEDSYMREF';
-         GIT_EPACKEDREFSCORRUPTED   : Result := 'GIT_EPACKEDREFSCORRUPTED';
-         GIT_EINVALIDPATH           : Result := 'GIT_EINVALIDPATH';
-         GIT_EREVWALKOVER           : Result := 'GIT_EREVWALKOVER';
-         else
-            Result := 'Unknown';
-      end;
+      if aExpectedResult <> aResult then
+         CheckEquals(GitReturnValue(aExpectedResult), GitReturnValue(aResult));
+   end
+   else
+   begin
+      if aResult = GIT_SUCCESS then
+         CheckEquals('not GIT_SUCCESS', GitReturnValue(aResult));
    end;
+end;
+
+procedure TTestFromLibGit2.must_pass(aResult: Integer);
 begin
    if aResult <> GIT_SUCCESS then
-   begin
-      CheckEquals('GIT_SUCCESS', GitReturnValue);
+      CheckEquals('GIT_SUCCESS', GitReturnValue(aResult));
+end;
+
+function TTestFromLibGit2.GitReturnValue(aResult: Integer): String;
+begin
+   case aResult of
+      GIT_ERROR                  : Result := 'GIT_ERROR';
+      GIT_ENOTOID                : Result := 'GIT_ENOTOID';
+      GIT_ENOTFOUND              : Result := 'GIT_ENOTFOUND';
+      GIT_ENOMEM                 : Result := 'GIT_ENOMEM';
+      GIT_EOSERR                 : Result := 'GIT_EOSERR';
+      GIT_EOBJTYPE               : Result := 'GIT_EOBJTYPE';
+      GIT_EOBJCORRUPTED          : Result := 'GIT_EOBJCORRUPTED';
+      GIT_ENOTAREPO              : Result := 'GIT_ENOTAREPO';
+      GIT_EINVALIDTYPE           : Result := 'GIT_EINVALIDTYPE';
+      GIT_EMISSINGOBJDATA        : Result := 'GIT_EMISSINGOBJDATA';
+      GIT_EPACKCORRUPTED         : Result := 'GIT_EPACKCORRUPTED';
+      GIT_EFLOCKFAIL             : Result := 'GIT_EFLOCKFAIL';
+      GIT_EZLIB                  : Result := 'GIT_EZLIB';
+      GIT_EBUSY                  : Result := 'GIT_EBUSY';
+      GIT_EBAREINDEX             : Result := 'GIT_EBAREINDEX';
+      GIT_EINVALIDREFNAME        : Result := 'GIT_EINVALIDREFNAME';
+      GIT_EREFCORRUPTED          : Result := 'GIT_EREFCORRUPTED';
+      GIT_ETOONESTEDSYMREF       : Result := 'GIT_ETOONESTEDSYMREF';
+      GIT_EPACKEDREFSCORRUPTED   : Result := 'GIT_EPACKEDREFSCORRUPTED';
+      GIT_EINVALIDPATH           : Result := 'GIT_EINVALIDPATH';
+      GIT_EREVWALKOVER           : Result := 'GIT_EREVWALKOVER';
+      else
+         Result := 'Unknown';
    end;
 end;
 

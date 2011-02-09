@@ -29,7 +29,8 @@ uses
   t0802_write in 'TestsFromLibGit2\t0802_write.pas',
   t0901_readtree in 'TestsFromLibGit2\t0901_readtree.pas',
   t0902_modify in 'TestsFromLibGit2\t0902_modify.pas',
-  uTestHelpers in 'uTestHelpers.pas';
+  uTestHelpers in 'uTestHelpers.pas',
+  t10_refs in 'TestsFromLibGit2\t10_refs.pas';
 
 {$R *.RES}
 

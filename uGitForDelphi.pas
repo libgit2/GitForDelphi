@@ -861,6 +861,11 @@ type
 //         0: (ref: PAnsiChar);
 //         1: (oid: git_oid);
       oid: git_oid;
+
+      function GetPacked: Integer;
+      function GetModified: Integer;
+      property packed_: Integer read GetPacked;
+      property modified: Integer read GetModified;
    end;
 
 var
@@ -1549,6 +1554,18 @@ end;
 function git_index.GetSorted: Integer;
 begin
    Result := (sortedANDon_disk) and 1;
+end;
+
+{ git_reference }
+
+function git_reference.GetModified: Integer;
+begin
+   Result := (packedAndModified shr 1) and 1;
+end;
+
+function git_reference.GetPacked: Integer;
+begin
+   Result := (packedAndModified) and 1;
 end;
 
 initialization
