@@ -1,4 +1,4 @@
-unit t0601_read;
+﻿unit t06_index;
 
 interface
 
@@ -7,7 +7,7 @@ uses
    uTestsFromLibGit2, uGitForDelphi;
 
 type
-   Test0601_read = class(TTestFromLibGit2)
+   Test06_index_read = class(TTestFromLibGit2)
       procedure index_loadempty_test_0601;
       procedure index_load_test_0601;
       procedure index2_load_test_0601;
@@ -15,11 +15,15 @@ type
       procedure index_findempty_test_0601;
    end;
 
+   Test06_index_write = class(TTestFromLibGit2)
+      procedure index_write_test;
+   end;
+
 implementation
 
 { Test0601_read }
 
-procedure Test0601_read.index_loadempty_test_0601;
+procedure Test06_index_read.index_loadempty_test_0601;
 var
    index: Pgit_index;
 begin
@@ -35,7 +39,7 @@ begin
    git_index_free(index);
 end;
 
-procedure Test0601_read.index_load_test_0601;
+procedure Test06_index_read.index_load_test_0601;
 var
    path: AnsiString;
    index: Pgit_index;
@@ -70,7 +74,7 @@ begin
    git_index_free(index);
 end;
 
-procedure Test0601_read.index2_load_test_0601;
+procedure Test06_index_read.index2_load_test_0601;
 var
    index: Pgit_index;
 begin
@@ -87,7 +91,7 @@ begin
    git_index_free(index);
 end;
 
-procedure Test0601_read.index_find_test_0601;
+procedure Test06_index_read.index_find_test_0601;
 var
    index: Pgit_index;
    i, idx: Integer;
@@ -104,7 +108,7 @@ begin
    git_index_free(index);
 end;
 
-procedure Test0601_read.index_findempty_test_0601;
+procedure Test06_index_read.index_findempty_test_0601;
 var
    index: Pgit_index;
    i, idx: Integer;
@@ -120,7 +124,26 @@ begin
    git_index_free(index);
 end;
 
+procedure Test06_index_write.index_write_test;
+var
+   index: Pgit_index;
+begin
+   CopyFile(TEST_INDEXBIG_PATH, 'index_rewrite', true);
+
+   must_pass(git_index_open_bare(index, 'index_rewrite'));
+   must_pass(git_index_read(index));
+   must_be_true(index.on_disk > 0);
+
+   must_pass(git_index_write(index));
+   must_pass(cmp_files(TEST_INDEXBIG_PATH, 'index_rewrite'));
+
+   git_index_free(index);
+
+   SysUtils.DeleteFile('index_rewrite');
+end;
+
 initialization
-   RegisterTest('From libgit2', Test0601_read.Suite);
+   RegisterTest('From libgit2.t06-index', Test06_index_read.Suite);
+   RegisterTest('From libgit2.t06-index', Test06_index_write.Suite);
 
 end.

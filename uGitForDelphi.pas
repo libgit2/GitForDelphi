@@ -217,7 +217,6 @@ type
    Pgit_index = ^git_index;
    Pgit_hashtable = ^git_hashtable;
    Pgit_hashtable_node = ^git_hashtable_node;
-   PPgit_hashtable_node = ^Pgit_hashtable_node;
    Pgit_map = ^git_map;
    PPgit_index_entry = ^Pgit_index_entry;
    Pgit_index_entry = ^git_index_entry;
@@ -267,8 +266,6 @@ type
 //   struct git_odb_backend {
 //      git_odb *odb;
 //
-//      int priority;
-//
 //      int (* read)(
 //            git_rawobj *,
 //            struct git_odb_backend *,
@@ -292,8 +289,6 @@ type
 //   };
    git_odb_backend = record
       odb:                                               Pgit_odb;
-
-      priority:                                          Integer;
 
       read:                                              Pointer;
       read_header:                                       Pointer;
@@ -551,32 +546,34 @@ type
    end;
 
 //   struct git_hashtable_node {
-//      void *object;
-//      uint32_t hash;
-//      struct git_hashtable_node *next;
+//      const void *key;
+//      void *value;
 //   };
    git_hashtable_node = record
-      object_:                                           PByte;
-      hash:                                              UInt;
-      next:                                              Pgit_hashtable_node;
+      key:                                               PByte;
+      value:                                             PByte;
    end;
 
 //   struct git_hashtable {
-//      struct git_hashtable_node **nodes;
+//      struct git_hashtable_node *nodes;
 //
-//      unsigned int size_mask;
-//      unsigned int count;
-//      unsigned int max_count;
+//      size_t size_mask;
+//      size_t size;
+//      size_t key_count;
+//
+//      int is_resizing;
 //
 //      git_hash_ptr hash;
 //      git_hash_keyeq_ptr key_equal;
 //   };
    git_hashtable = record
-      nodes:                                             PPgit_hashtable_node;
+      nodes:                                             Pgit_hashtable_node;
 
-      size_mask:                                         UInt;
-      count:                                             UInt;
-      max_count:                                         UInt;
+      size_mask:                                         size_t;
+      count:                                             size_t;
+      max_count:                                         size_t;
+
+      is_resizing:                                       Integer;
 
       hash:        Pointer;
       key_equal:   Pointer;
@@ -957,8 +954,10 @@ var
    git_odb_new:                        function (var out_: Pgit_odb): Integer cdecl;
    // GIT_EXTERN(int) git_odb_open(git_odb **out, const char *objects_dir);
    git_odb_open:                       function (var out_: Pgit_odb; const objects_dir: PAnsiChar): Integer cdecl;
-   // GIT_EXTERN(int) git_odb_add_backend(git_odb *odb, git_odb_backend *backend);
-   git_odb_add_backend:                function (odb: Pgit_odb; backend: Pgit_odb_backend): Integer cdecl;
+   // GIT_EXTERN(int) git_odb_add_backend(git_odb *odb, git_odb_backend *backend, int priority);
+   git_odb_add_backend:                function (odb: Pgit_odb; backend: Pgit_odb_backend; priority: Integer): Integer cdecl;
+   // GIT_EXTERN(int) git_odb_add_alternate(git_odb *odb, git_odb_backend *backend, int priority);
+   git_odb_add_alternate:              function (odb: Pgit_odb; backend: Pgit_odb_backend; priority: Integer): Integer cdecl;
    // GIT_EXTERN(void) git_odb_close(git_odb *db);
    git_odb_close:                      procedure (db: Pgit_odb) cdecl;
    // GIT_EXTERN(int) git_odb_read(git_rawobj *out, git_odb *db, const git_oid *id);
@@ -1294,6 +1293,7 @@ begin
       git_odb_new                               := Bind('git_odb_new');
       git_odb_open                              := Bind('git_odb_open');
       git_odb_add_backend                       := Bind('git_odb_add_backend');
+      git_odb_add_alternate                     := Bind('git_odb_add_alternate');
       git_odb_close                             := Bind('git_odb_close');
       git_odb_read                              := Bind('git_odb_read');
       git_odb_read_header                       := Bind('git_odb_read_header');
@@ -1445,6 +1445,7 @@ begin
     git_odb_new                               := nil;
     git_odb_open                              := nil;
     git_odb_add_backend                       := nil;
+    git_odb_add_alternate                     := nil;
     git_odb_close                             := nil;
     git_odb_read                              := nil;
     git_odb_read_header                       := nil;

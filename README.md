@@ -10,7 +10,7 @@ converted and are all passing.
 git2-0.dll built from Visual C++ 2010 Express is in the `binary` branch,
 you can use it while in the master branch like this
 
-    git checkout binary -- git2-0.dll; git reset git2-0.dll
+    git checkout origin/binary -- git2-0.dll; git reset git2-0.dll
 
-The dll and code are currently based on the `772c7e7` commit of libgit2.git
+The dll and code are currently based on the `fc70832` commit of libgit2.git
 

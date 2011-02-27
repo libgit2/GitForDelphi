@@ -122,7 +122,6 @@ procedure TTestGitRecords.Test_git_odb_backend;
      item: git_odb_backend;
    begin
      if      Value = 'odb'                then Result := Integer(@item.odb) - Integer(@item)
-     else if Value = 'priority'           then Result := Integer(@item.priority) - Integer(@item)
      else if Value = 'read'               then Result := Integer(@item.read) - Integer(@item)
      else if Value = 'read_header'        then Result := Integer(@item.read_header) - Integer(@item)
      else if Value = 'write'              then Result := Integer(@item.write) - Integer(@item)
@@ -131,15 +130,14 @@ procedure TTestGitRecords.Test_git_odb_backend;
      else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
    end;
 begin
-   CheckEquals( 28, sizeof(git_odb_backend),       'git_odb_backend size');
+   CheckEquals( 24, sizeof(git_odb_backend),       'git_odb_backend size');
 
    CheckEquals(  0, offsetof('odb'),               'odb');
-   CheckEquals(  4, offsetof('priority'),          'priority');
-   CheckEquals(  8, offsetof('read'),              'read');
-   CheckEquals( 12, offsetof('read_header'),       'read_header');
-   CheckEquals( 16, offsetof('write'),             'write');
-   CheckEquals( 20, offsetof('exists'),            'exists');
-   CheckEquals( 24, offsetof('free'),              'free');
+   CheckEquals(  4, offsetof('read'),              'read');
+   CheckEquals(  8, offsetof('read_header'),       'read_header');
+   CheckEquals( 12, offsetof('write'),             'write');
+   CheckEquals( 16, offsetof('exists'),            'exists');
+   CheckEquals( 20, offsetof('free'),              'free');
 end;
 
 procedure TTestGitRecords.Test_git_pack;
@@ -384,12 +382,12 @@ procedure TTestGitRecords.Test_pack_backend;
      else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
    end;
 begin
-   CheckEquals( 40, sizeof(pack_backend),          'pack_backend size');
+   CheckEquals( 36, sizeof(pack_backend),          'pack_backend size');
 
    CheckEquals(  0, offsetof('parent'),            'parent');
-   CheckEquals( 28, offsetof('lock'),              'lock');
-   CheckEquals( 32, offsetof('objects_dir'),       'objects_dir');
-   CheckEquals( 36, offsetof('packlist'),          'packlist');
+   CheckEquals( 24, offsetof('lock'),              'lock');
+   CheckEquals( 28, offsetof('objects_dir'),       'objects_dir');
+   CheckEquals( 32, offsetof('packlist'),          'packlist');
 end;
 
 procedure TTestGitRecords.Test_sizes;
@@ -405,8 +403,8 @@ begin
    CheckEquals( 96, sizeof(git_index_entry),        'git_index_entry');
    CheckEquals( 40, sizeof(git_index_tree),         'git_index_tree');
    CheckEquals( 48, sizeof(git_index),              'git_index');
-   CheckEquals( 12, sizeof(git_hashtable_node),     'git_hashtable_node');
-   CheckEquals( 24, sizeof(git_hashtable),          'git_hashtable');
+   CheckEquals(  8, sizeof(git_hashtable_node),     'git_hashtable_node');
+   CheckEquals( 28, sizeof(git_hashtable),          'git_hashtable');
    CheckEquals( 40, sizeof(git_repository),         'git_repository');
    CheckEquals( 24, sizeof(git_odb_source),         'git_odb_source');
    CheckEquals( 52, sizeof(git_object),             'git_object');

@@ -21,6 +21,7 @@ const
    REPOSITORY_FOLDER_         = 'resources/testrepo.git/';
    TEST_INDEX_PATH            = 'resources/testrepo.git/index';
    TEST_INDEX2_PATH           = 'resources/gitgit.index';
+   TEST_INDEXBIG_PATH         = 'resources/big.index';
    TEST_INDEX_ENTRY_COUNT     = 109;
    TEST_INDEX2_ENTRY_COUNT    = 1437;
 
@@ -49,8 +50,12 @@ const
 
 function REPOSITORY_FOLDER: PAnsiChar;
 function OctalToInt(const Value: string): Longint;
+function cmp_files(const File1, File2: TFileName): Integer;
 
 implementation
+
+uses
+   Classes;
 
 function REPOSITORY_FOLDER: PAnsiChar;
 begin
@@ -84,8 +89,7 @@ end;
 
 procedure TTestFromLibGit2.must_pass(aResult: Integer);
 begin
-   if aResult <> GIT_SUCCESS then
-      CheckEquals('GIT_SUCCESS', GitReturnValue(aResult));
+   CheckTrue(aResult = GIT_SUCCESS, GitReturnValue(aResult));
 end;
 
 function TTestFromLibGit2.GitReturnValue(aResult: Integer): String;
@@ -170,6 +174,31 @@ begin
    FreeMem(full_path, path_length + objects_length + GIT_OID_HEXSZ + 3);
 
    Result := GIT_SUCCESS;
+end;
+
+function cmp_files(const File1, File2: TFileName): Integer;
+var
+   ms1, ms2: TMemoryStream;
+begin
+   Result := GIT_ERROR;
+
+   ms2 := nil;
+   ms1 := TMemoryStream.Create;
+   try
+      ms2 := TMemoryStream.Create;
+
+      ms1.LoadFromFile(File1);
+      ms2.LoadFromFile(File2);
+
+      if ms1.Size = ms2.Size then
+      begin
+         if CompareMem(ms1.Memory, ms2.Memory, ms1.Size) then
+            Result := GIT_SUCCESS;
+      end;
+   finally
+      ms1.Free;
+      ms2.Free;
+   end
 end;
 
 initialization
