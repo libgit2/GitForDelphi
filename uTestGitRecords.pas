@@ -24,6 +24,7 @@ type
       procedure Test_git_time;
       procedure Test_git_signature;
       procedure Test_git_reference;
+      procedure Test_git_object;
    end;
 
 implementation
@@ -68,7 +69,7 @@ procedure TTestGitRecords.Test_git_index;
      else if Value = 'index_file_path'    then Result := Integer(@item.index_file_path) - Integer(@item)
      else if Value = 'last_modified'      then Result := Integer(@item.last_modified) - Integer(@item)
      else if Value = 'entries'            then Result := Integer(@item.entries) - Integer(@item)
-     else if Value = 'sortedANDon_disk'   then Result := Integer(@item.sortedANDon_disk) - Integer(@item)
+     else if Value = 'on_disk'            then Result := Integer(@item.on_disk) - Integer(@item)
      else if Value = 'tree'               then Result := Integer(@item.tree) - Integer(@item)
      else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
    end;
@@ -98,6 +99,30 @@ begin
    CheckEquals(  0, offsetof('data'),      'data');
    CheckEquals(  4, offsetof('len'),       'len');
    CheckEquals(  8, offsetof('fmh'),       'fmh');
+end;
+
+procedure TTestGitRecords.Test_git_object;
+   function offsetof(const Value: string): Integer;
+   var
+      item: git_object;
+   begin
+      if      Value = 'id'                then Result := Integer(@item.id) - Integer(@item)
+      else if Value = 'repo'              then Result := Integer(@item.repo) - Integer(@item)
+      else if Value = 'source'            then Result := Integer(@item.source) - Integer(@item)
+      else if Value = 'refcount'          then Result := Integer(@item.refcount) - Integer(@item)
+      else if Value = 'in_memory'         then Result := Integer(@item.in_memory) - Integer(@item)
+      else if Value = 'modified'          then Result := Integer(@item.modified) - Integer(@item)
+      else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
+   end;
+begin
+   CheckEquals( 52, sizeof(git_object),             'git_object');
+
+   CheckEquals(  0, offsetof('id'),                 'id');
+   CheckEquals( 20, offsetof('repo'),               'repo');
+   CheckEquals( 24, offsetof('source'),             'source');
+   CheckEquals( 48, offsetof('refcount'),           'refcount');
+   CheckEquals( 50, offsetof('in_memory'),          'in_memory');
+   CheckEquals( 51, offsetof('modified'),           'modified');
 end;
 
 procedure TTestGitRecords.Test_git_odb;
@@ -239,29 +264,18 @@ procedure TTestGitRecords.Test_git_reference;
       item: git_reference;
    begin
       if Value = 'owner'                  then  Result := Integer(@item.owner) - Integer(@item)
-      else if Value = 'type_'             then  Result := Integer(@item.type_) - Integer(@item)
       else if Value = 'name'              then  Result := Integer(@item.name) - Integer(@item)
-
-      else if Value = 'packedAndModified' then  Result := Integer(@item.packedAndModified) - Integer(@item)
-
-//      else if Value = 'target'            then  Result := Integer(@item.target) - Integer(@item)
-//      else if Value = 'ref'               then  Result := Integer(@item.ref) - Integer(@item)
-      else if Value = 'oid'               then  Result := Integer(@item.oid) - Integer(@item)
-
+      else if Value = 'type_'             then  Result := Integer(@item.type_) - Integer(@item)
       else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
    end;
 begin
    // Variant record doesn't seem to be equivalent to C union in a struct (the sizeof was 40 in Delphi),
    // so ignoring the "char *ref;" member for now.
-   CheckEquals( 36, sizeof(git_reference),  'git_reference size');
+   CheckEquals( 12, sizeof(git_reference),  'git_reference size');
 
    CheckEquals(  0, offsetof('owner'),      'owner');
-   CheckEquals(  4, offsetof('type_'),      'type_');
-   CheckEquals(  8, offsetof('name'),       'name');
-//   CheckEquals( 16, offsetof('target'),     'target');
-
-//   CheckEquals( 16, offsetof('ref'),        'ref');
-   CheckEquals( 16, offsetof('oid'),        'oid');
+   CheckEquals(  4, offsetof('name'),       'name');
+   CheckEquals(  8, offsetof('type_'),      'type_');
 end;
 
 procedure TTestGitRecords.Test_git_revwalk;
@@ -355,9 +369,10 @@ procedure TTestGitRecords.Test_git_vector;
    begin
      if      Value = '_alloc_size'        then Result := Integer(@item._alloc_size) - Integer(@item)
      else if Value = '_cmp'               then Result := Integer(@item._cmp) - Integer(@item)
-     else if Value = '_srch'              then Result := Integer(@item._srch) - Integer(@item)
      else if Value = 'contents'           then Result := Integer(@item.contents) - Integer(@item)
      else if Value = 'length'             then Result := Integer(@item.length) - Integer(@item)
+     else if Value = 'sorted'             then Result := Integer(@item.sorted) - Integer(@item)
+
      else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
    end;
 begin
@@ -365,9 +380,9 @@ begin
 
    CheckEquals(  0, offsetof('_alloc_size'),       '_alloc_size');
    CheckEquals(  4, offsetof('_cmp'),              '_cmp');
-   CheckEquals(  8, offsetof('_srch'),             '_srch');
-   CheckEquals( 12, offsetof('contents'),          'contents');
-   CheckEquals( 16, offsetof('length'),            'length');
+   CheckEquals(  8, offsetof('contents'),          'contents');
+   CheckEquals( 12, offsetof('length'),            'length');
+   CheckEquals( 16, offsetof('sorted'),            'sorted');
 end;
 
 procedure TTestGitRecords.Test_pack_backend;
@@ -405,11 +420,10 @@ begin
    CheckEquals( 48, sizeof(git_index),              'git_index');
    CheckEquals(  8, sizeof(git_hashtable_node),     'git_hashtable_node');
    CheckEquals( 28, sizeof(git_hashtable),          'git_hashtable');
-   CheckEquals( 40, sizeof(git_repository),         'git_repository');
+   CheckEquals( 60, sizeof(git_repository),         'git_repository');
    CheckEquals( 24, sizeof(git_odb_source),         'git_odb_source');
-   CheckEquals( 52, sizeof(git_object),             'git_object');
    CheckEquals( 32, sizeof(git_tree_entry),         'git_tree_entry');
-   CheckEquals( 76, sizeof(git_tree),               'git_tree');
+   CheckEquals( 72, sizeof(git_tree),               'git_tree');
    CheckEquals( 12, sizeof(git_revwalk_listnode),   'git_revwalk_listnode');
    CheckEquals( 12, sizeof(git_revwalk_list),       'git_revwalk_list');
    CheckEquals( 24, sizeof(git_revwalk_commit),     'git_revwalk_commit');

@@ -34,7 +34,7 @@ begin
 
    CheckTrue(index.on_disk = 0);
    CheckTrue(git_index_entrycount(index) = 0);
-   CheckTrue(index.sorted = 1);
+   CheckTrue(index.entries.sorted = 1);
 
    git_index_free(index);
 end;
@@ -57,7 +57,7 @@ begin
 
    CheckTrue(index.on_disk = 1);
    CheckTrue(git_index_entrycount(index) = TEST_INDEX_ENTRY_COUNT);
-   CheckTrue(index.sorted = 1);
+   CheckTrue(index.entries.sorted = 1);
 
    entries := PPgit_index_entry(index.entries.contents);
 
@@ -85,7 +85,7 @@ begin
 
    CheckTrue(index.on_disk = 1);
    CheckTrue(git_index_entrycount(index) = TEST_INDEX2_ENTRY_COUNT);
-   CheckTrue(index.sorted = 1);
+   CheckTrue(index.entries.sorted = 1);
    CheckTrue(index.tree <> nil);
 
    git_index_free(index);

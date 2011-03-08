@@ -43,8 +43,6 @@ begin
    must_pass(git_object_write(Pgit_object(tree)));
    must_pass(remove_loose_object(REPOSITORY_FOLDER, Pgit_object(tree)));
 
-   git_object_free(Pgit_object(tree));
-
    git_repository_free(repo);
 end;
 
@@ -95,7 +93,7 @@ begin
 *)
 
    must_pass(remove_loose_object(REPOSITORY_FOLDER, Pgit_object(tree)));
-   git_object_free(Pgit_object(tree));
+
    git_repository_free(repo);
 end;
 

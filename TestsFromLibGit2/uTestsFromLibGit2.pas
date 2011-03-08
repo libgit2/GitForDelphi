@@ -15,6 +15,12 @@ type
       procedure must_fail(aResult: Integer; aExpectedResult: Integer = 0);
       procedure must_be_true(b: Boolean; const msg: String = '');
       function remove_loose_object(const aRepository_folder: PAnsiChar; object_: Pgit_object): Integer;
+      function gitfo_exists(const path: String): Integer;
+      function gitfo_not_exists(const path: String): Integer;
+      function copydir_recurs(const fromDir, toDir: string): Boolean;
+      function rmdir_recurs(const dir: string): Boolean;
+      function open_temp_repo(var repo: Pgit_repository; const path: PAnsiChar): Integer;
+      procedure close_temp_repo(repo: Pgit_repository);
    end;
 
 const
@@ -24,6 +30,7 @@ const
    TEST_INDEXBIG_PATH         = 'resources/big.index';
    TEST_INDEX_ENTRY_COUNT     = 109;
    TEST_INDEX2_ENTRY_COUNT    = 1437;
+   TEMP_REPO_FOLDER: PAnsiChar = './testrepo.git/';
 
    tag1_id           = 'b25fa35b38051e4ae45d4222e795f9df2e43f1d1';
    tag2_id           = '7b4384978d2493e851f9cca7858815fac9b10980';
@@ -55,7 +62,7 @@ function cmp_files(const File1, File2: TFileName): Integer;
 implementation
 
 uses
-   Classes;
+   Classes, ShellAPI;
 
 function REPOSITORY_FOLDER: PAnsiChar;
 begin
@@ -90,6 +97,22 @@ end;
 procedure TTestFromLibGit2.must_pass(aResult: Integer);
 begin
    CheckTrue(aResult = GIT_SUCCESS, GitReturnValue(aResult));
+end;
+
+function TTestFromLibGit2.gitfo_exists(const path: String): Integer;
+begin
+   if DirectoryExists(path) or FileExists(path) then
+      Result := GIT_SUCCESS
+   else
+      Result := GIT_ERROR;
+end;
+
+function TTestFromLibGit2.gitfo_not_exists(const path: String): Integer;
+begin
+   if DirectoryExists(path) or FileExists(path) then
+      Result := GIT_ERROR
+   else
+      Result := GIT_SUCCESS;
 end;
 
 function TTestFromLibGit2.GitReturnValue(aResult: Integer): String;
@@ -199,6 +222,57 @@ begin
       ms1.Free;
       ms2.Free;
    end
+end;
+
+function TTestFromLibGit2.copydir_recurs(const fromDir, toDir: string): Boolean;
+var
+  fos: ShellAPI.TSHFileOpStruct;
+begin
+  ZeroMemory(@fos, SizeOf(fos));
+
+  fos.wFunc  := FO_COPY;
+  fos.fFlags := FOF_FILESONLY;
+  fos.pFrom  := PChar(fromDir);
+  fos.pTo    := PChar(toDir);
+
+  Result := (0 = ShellAPI.ShFileOperation(fos));
+end;
+
+function TTestFromLibGit2.rmdir_recurs(const dir: string): Boolean;
+var
+  fos: ShellAPI.TSHFileOpStruct;
+begin
+  ZeroMemory(@fos, SizeOf(fos));
+
+  fos.wFunc  := FO_DELETE;
+  fos.fFlags := FOF_SILENT or FOF_NOCONFIRMATION;
+  fos.pFrom  := PChar(dir + #0);
+
+  Result := (0 = ShellAPI.ShFileOperation(fos));
+end;
+
+function TTestFromLibGit2.open_temp_repo(var repo: Pgit_repository; const path: PAnsiChar): Integer;
+var
+   from_path, to_path: String;
+begin
+   from_path   := StringReplace(String(AnsiString(path)), '/', PathDelim, [rfReplaceAll]);
+   to_path     := StringReplace(String(AnsiString(TEMP_REPO_FOLDER)), '/', PathDelim, [rfReplaceAll]);
+
+   if not copydir_recurs(from_path, to_path) then
+      Result := GIT_ERROR
+   else
+      Result := git_repository_open(repo, TEMP_REPO_FOLDER);
+end;
+
+procedure TTestFromLibGit2.close_temp_repo(repo: Pgit_repository);
+var
+   path: String;
+begin
+   git_repository_free(repo);
+
+   path     := StringReplace(String(AnsiString(TEMP_REPO_FOLDER)), '/', PathDelim, [rfReplaceAll]);
+
+   rmdir_recurs(path);
 end;
 
 initialization
