@@ -232,8 +232,8 @@ begin
 
   fos.wFunc  := FO_COPY;
   fos.fFlags := FOF_FILESONLY;
-  fos.pFrom  := PChar(fromDir);
-  fos.pTo    := PChar(toDir);
+  fos.pFrom  := PChar(fromDir + #0);
+  fos.pTo    := PChar(toDir + #0);
 
   Result := (0 = ShellAPI.ShFileOperation(fos));
 end;
