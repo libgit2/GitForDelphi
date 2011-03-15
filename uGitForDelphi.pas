@@ -174,17 +174,12 @@ const
 
 //   /** Basic type of any Git reference. */
 //   typedef enum {
-//      GIT_REF_INVALID = -1, /** Invalid reference */
-//      GIT_REF_OID = 1, /** A reference which points at an object id */
-//      GIT_REF_SYMBOLIC = 2, /** A reference which points at another reference */
-//   } git_rtype;
-
-//   typedef enum {
 //      GIT_REF_INVALID = 0, /** Invalid reference */
 //      GIT_REF_OID = 1, /** A reference which points at an object id */
 //      GIT_REF_SYMBOLIC = 2, /** A reference which points at another reference */
 //      GIT_REF_PACKED = 4,
 //      GIT_REF_HAS_PEEL = 8,
+//      GIT_REF_LISTALL = GIT_REF_OID|GIT_REF_SYMBOLIC|GIT_REF_PACKED,
 //   } git_rtype
 
    GIT_REF_INVALID   = 0;
@@ -192,6 +187,7 @@ const
    GIT_REF_SYMBOLIC  = 2;
    GIT_REF_PACKED    = 4;
    GIT_REF_HAS_PEEL  = 8;
+   GIT_REF_LISTALL   = GIT_REF_OID or GIT_REF_SYMBOLIC or GIT_REF_PACKED;
 
    GIT_HEAD_FILE:      PAnsiChar = 'HEAD';
    GIT_REFS_HEADS_DIR: PAnsiChar = 'heads/';
@@ -224,9 +220,6 @@ type
 
    PPByte = ^PByte;
    Pgit_repository = ^git_repository;
-   PPgit_pack = ^Pgit_pack;
-   Pgit_pack = ^git_pack;
-   Pgit_packlist = ^git_packlist;
    Pgit_oid = ^git_oid;
    Pgit_odb = ^git_odb;
    PPgit_odb = ^Pgit_odb;
@@ -247,16 +240,12 @@ type
    Pgit_tree_entry = ^git_tree_entry;
    PPgit_tree_entry = ^Pgit_tree_entry;
    Pgit_rawobj = ^git_rawobj;
-   Pgit_revwalk = ^git_revwalk;
-   PPgit_revwalk = ^Pgit_revwalk;
-   Pgit_revwalk_list = ^git_revwalk_list;
-   Pgit_revwalk_commit = ^git_revwalk_commit;
-   Pgit_revwalk_listnode = ^git_revwalk_listnode;
+   Pgit_revwalk = Pointer;
    Pgit_tag = ^git_tag;
-   Ppack_backend = ^pack_backend;
    Pgit_blob = ^git_blob;
    Pgit_odb_backend = ^git_odb_backend;
    Pgit_reference = ^git_reference;
+   Pgit_strarray = ^git_strarray;
 
 //   typedef int (*git_vector_cmp)(const void *, const void *);
    git_vector_cmp = Pointer;
@@ -310,32 +299,6 @@ type
       free:                                              Pointer;
    end;
 
-//   typedef struct pack_backend {
-//      git_odb_backend parent;
-//
-//      git_lck lock;
-//      char *objects_dir;
-//      git_packlist *packlist;
-//   } pack_backend;
-   pack_backend = record
-      parent:                                            git_odb_backend;
-
-      lock:                                              git_lck;
-      objects_dir:                                       PAnsiChar;
-      packlist:                                          Pgit_packlist;
-   end;
-
-//   typedef struct {
-//      size_t n_packs;
-//      unsigned int refcnt;
-//      git_pack *packs[GIT_FLEX_ARRAY];
-//   } git_packlist;
-   git_packlist = record
-      n_packs:                                           size_t;
-      refcnt:                                            UInt;
-      packs:                                             PPgit_pack;
-   end;
-
 //   struct git_odb {
 //      void *_internal;
 //      git_vector backends;
@@ -356,109 +319,6 @@ type
       data:                                              PByte;  //* data bytes          */
       len:                                               size_t;  //* data length         */
       fmh:                                               THandle;  //* file mapping handle */
-   end;
-
-//   struct git_pack {
-//      struct pack_backend *backend;
-//      git_lck lock;
-//
-//      /** Functions to access idx_map. */
-//      int (*idx_search)(
-//         uint32_t *,
-//         struct git_pack *,
-//         const git_oid *);
-//      int (*idx_search_offset)(
-//         uint32_t *,
-//         struct git_pack *,
-//         off_t);
-//      int (*idx_get)(
-//         index_entry *,
-//         struct git_pack *,
-//         uint32_t n);
-//
-//      /** The .idx file, mapped into memory. */
-//      git_file idx_fd;
-//      git_map idx_map;
-//      uint32_t *im_fanout;
-//      unsigned char *im_oid;
-//      uint32_t *im_crc;
-//      uint32_t *im_offset32;
-//      uint32_t *im_offset64;
-//      uint32_t *im_off_idx;
-//      uint32_t *im_off_next;
-//
-//      /** Number of objects in this pack. */
-//      uint32_t obj_cnt;
-//
-//      /** File descriptor for the .pack file. */
-//      git_file pack_fd;
-//
-//      /** Memory map of the pack's contents */
-//      git_map pack_map;
-//
-//      /** The size of the .pack file. */
-//      off_t pack_size;
-//
-//      /** The mtime of the .pack file. */
-//      time_t pack_mtime;
-//
-//      /** Number of git_packlist we appear in. */
-//      unsigned int refcnt;
-//
-//      /** Number of active users of the idx_map data. */
-//      unsigned int idxcnt;
-//      unsigned
-//         invalid:1 /* the pack is unable to be read by libgit2 */
-//         ;
-//
-//      /** Name of the pack file(s), without extension ("pack-abc"). */
-//      char pack_name[GIT_PACK_NAME_MAX];
-//   } git_pack;
-   git_pack = record
-      backend:                                           Ppack_backend;
-      lock:                                              git_lck;
-
-      //* Functions to access idx_map. */
-      idx_search:          Pointer; // function (i: PUInt; pack: Pgit_pack; const oid: Pgit_oid):  Integer cdecl;
-      idx_search_offset:   Pointer; // function (i: PUint; pack: Pgit_pack; t: off_t):             Integer cdecl;
-      idx_get:             Pointer; // function (entry: Pindex_entry; pack: Pgit_pack; n: UInt):   Integer cdecl;
-
-      //* The .idx file, mapped into memory. */
-      idx_fd:                                            git_file;
-      idx_map:                                           git_map;
-      im_fanout:                                         PUINT;
-      im_oid:                                            PByte;
-      im_crc:                                            PUINT;
-      im_offset32:                                       PUINT;
-      im_offset64:                                       PUINT;
-      im_off_idx:                                        PUINT;
-      im_off_next:                                       PUINT;
-
-      //* Number of objects in this pack. */
-      obj_cnt:                                           UINT;
-
-      //* File descriptor for the .pack file. */
-      pack_fd:                                           git_file;
-
-      //* Memory map of the pack's contents */
-      pack_map:                                          git_map;
-
-      //* The size of the .pack file. */
-      pack_size:                                         off_t;
-
-      //* The mtime of the .pack file. */
-      pack_mtime:                                        time_t;
-
-      //* Number of git_packlist we appear in. */
-      refcnt:                                            UInt;
-
-      //* Number of active users of the idx_map data. */
-      idxcnt:                                            UInt;
-      //* the pack is unable to be read by libgit2 */
-      invalid:                                           Integer;
-
-      //* Name of the pack file(s), without extension ("pack-abc"). */
-      pack_name:                                         array[0..GIT_PACK_NAME_MAX-1] of AnsiChar;
    end;
 
 //   typedef struct {
@@ -608,7 +468,8 @@ type
 //      char *path_odb;
 //      char *path_workdir;
 //
-//      unsigned is_bare:1, gc_enabled:1;
+//      unsigned is_bare:1;
+//      unsigned int lru_counter;
 //   };
    git_repository = record
       db:                                                Pgit_odb;
@@ -624,7 +485,8 @@ type
       path_odb:                                          PAnsiChar;
       path_workdir:                                      PAnsiChar;
 
-      is_bareANDgc_enabled:                              UInt;
+      is_bare:                                           UInt;
+      lru_counter:                                       UInt;
    end;
 
 //   typedef struct {
@@ -655,16 +517,18 @@ type
 //      git_oid id;
 //      git_repository *repo;
 //      git_odb_source source;
-//      unsigned short refcount;
-//      unsigned char in_memory, modified;
+//      unsigned int lru;
+//      unsigned char in_memory, modified, can_free, _pad;
 //   };
    git_object = record
       id:                                                git_oid;
       repo:                                              Pgit_repository;
       source:                                            git_odb_source;
-      refcount:                                          Word;
+      lru:                                               UInt;
       in_memory:                                         Byte;
       modified:                                          Byte;
+      can_free:                                          Byte;
+      _pad:                                              Byte;
    end;
 
 //   struct git_tree_entry {
@@ -694,30 +558,26 @@ type
 //   struct git_commit {
 //      git_object object;
 //
-//      git_vector parents;
+//      git_vector parent_oids;
+//      git_oid tree_oid;
 //
-//      git_tree *tree;
 //      git_signature *author;
 //      git_signature *committer;
 //
 //      char *message;
 //      char *message_short;
-//
-//      unsigned full_parse:1;
 //   };
    git_commit = record
       object_:                                           git_object;
 
-      parents:                                           git_vector;
+      parent_oids:                                       git_vector;
+      tree_oid:                                          git_oid;
 
-      tree:                                              Pgit_tree;
       author:                                            Pgit_signature;
       committer:                                         Pgit_signature;
 
       message_:                                          PAnsiChar;
       message_short:                                     PAnsiChar;
-
-      full_parse:                                        UInt;
    end;
 
 //   /** Time in a signature */
@@ -742,75 +602,12 @@ type
       when:                                              git_time;
    end;
 
-//   typedef struct git_revwalk_listnode {
-//      struct git_revwalk_commit *walk_commit;
-//      struct git_revwalk_listnode *next;
-//      struct git_revwalk_listnode *prev;
-//   } git_revwalk_listnode;
-   git_revwalk_listnode = record
-      walk_commit:                                       Pgit_revwalk_commit;
-      next:                                              Pgit_revwalk_listnode;
-      prev:                                              Pgit_revwalk_listnode;
-   end;
-
-//   typedef struct git_revwalk_list {
-//      struct git_revwalk_listnode *head;
-//      struct git_revwalk_listnode *tail;
-//      size_t size;
-//   } git_revwalk_list;
-   git_revwalk_list = record
-      head:                                              Pgit_revwalk_listnode;
-      tail:                                              Pgit_revwalk_listnode;
-      size:                                              size_t;
-   end;
-
-//   struct git_revwalk_commit {
-//
-//      git_commit *commit_object;
-//      git_revwalk_list parents;
-//
-//      unsigned short in_degree;
-//      unsigned seen:1,
-//             uninteresting:1,
-//             topo_delay:1,
-//             flags:25;
-//   };
-   git_revwalk_commit = record
-      commit_object:                                     Pgit_commit;
-      parents:                                           git_revwalk_list;
-
-      in_degree:                                         SHORT;
-      seenANDuninterestingANDtopo_delayANDflags:         UInt;
-   end;
-
-//   struct git_revwalk {
-//      git_repository *repo;
-//
-//      git_hashtable *commits;
-//      git_revwalk_list iterator;
-//
-//      git_revwalk_commit *(*next)(git_revwalk_list *);
-//
-//      unsigned walking:1;
-//      unsigned int sorting;
-//   };
-   git_revwalk = record
-      repo:                                              Pgit_repository;
-
-      commits:                                           Pgit_hashtable;
-      iterator:                                          git_revwalk_list;
-
-      next:                  Pointer; // function (list: Pgit_revwalk_list): git_revwalk_commit cdecl;
-
-      walking:                                           UInt;
-      sorting:                                           UInt;
-   end;
-
 //   struct git_tag {
 //      git_object object;
 //
-//      git_object *target;
+//      git_oid target;
 //      git_otype type;
+//
 //      char *tag_name;
 //      git_signature *tagger;
 //      char *message;
@@ -818,8 +615,9 @@ type
    git_tag = record
       object_:                                           git_object;
 
-      target:                                            Pgit_object;
+      target:                                            git_oid;
       type_:                                             git_otype;
+
       tag_name:                                          PAnsiChar;
       tagger:                                            Pgit_signature;
       message_:                                          PAnsiChar;
@@ -854,6 +652,15 @@ type
       type_:                                             UInt;
    end;
 
+//   typedef struct {
+//      char **strings;
+//      size_t count;
+//   } git_strarray;
+   git_strarray = record
+      strings:                                           PPAnsiChar;
+      count:                                             size_t;
+   end;
+
 var
    // GIT_EXTERN(int) git_blob_set_rawcontent_fromfile(git_blob *blob, const char *filename);
    git_blob_set_rawcontent_fromfile:   function (blob: Pgit_blob; const filename: PAnsiChar): Integer cdecl;
@@ -880,12 +687,12 @@ var
    git_commit_time:                    function (commit: Pgit_commit): time_t cdecl;
    // GIT_EXTERN(unsigned int) git_commit_parentcount(git_commit *commit);
    git_commit_parentcount:             function (commit: Pgit_commit): UInt cdecl;
-   // GIT_EXTERN(git_commit *) git_commit_parent(git_commit *commit, unsigned int n);
-   git_commit_parent:                  function (commit: Pgit_commit; n: UInt): Pgit_commit cdecl;
+   // GIT_EXTERN(int) git_commit_parent(git_commit **parent, git_commit *commit, unsigned int n);
+   git_commit_parent:                  function (var parent: Pgit_commit; commit: Pgit_commit; n: UInt): Integer cdecl;
    // GIT_EXTERN(int) git_commit_time_offset(git_commit *commit);
-   git_commit_time_offset:         function (commit: Pgit_commit): Integer cdecl;
-   // GIT_EXTERN(const git_tree *) git_commit_tree(git_commit *commit);
-   git_commit_tree:                    function (commit: Pgit_commit): Pgit_tree cdecl;
+   git_commit_time_offset:             function (commit: Pgit_commit): Integer cdecl;
+   // GIT_EXTERN(int) git_commit_tree(git_tree **tree_out, git_commit *commit);
+   git_commit_tree:                    function (var tree_out: Pgit_tree; commit: Pgit_commit): Integer cdecl;
    // GIT_EXTERN(int) git_commit_add_parent(git_commit *commit, git_commit *new_parent);
    git_commit_add_parent:              function (commit: Pgit_commit; new_parent: Pgit_commit): Integer cdecl;
    // GIT_EXTERN(void) git_commit_set_message(git_commit *commit, const char *message);
@@ -894,8 +701,8 @@ var
    git_commit_set_committer:           procedure (commit: Pgit_commit; const committer_sig: Pgit_signature) cdecl;
    // GIT_EXTERN(void) git_commit_set_author(git_commit *commit, const git_signature *author_sig);
    git_commit_set_author:              procedure (commit: Pgit_commit; const author_sig: Pgit_signature) cdecl;
-   // GIT_EXTERN(void) git_commit_set_tree(git_commit *commit, git_tree *tree);
-   git_commit_set_tree:                procedure (commit: Pgit_commit; tree: Pgit_tree) cdecl;
+   // GIT_EXTERN(int) git_commit_set_tree(git_commit *commit, git_tree *tree);
+   git_commit_set_tree:                function (commit: Pgit_commit; tree: Pgit_tree): Integer cdecl;
 
    // GIT_EXTERN(int) git_index_open_bare(git_index **index, const char *index_path);
    git_index_open_bare:                function (var index: Pgit_index; const index_path: PAnsiChar): Integer cdecl;
@@ -998,8 +805,9 @@ var
    git_repository_open:                function (var repo_out: Pgit_repository; const path: PAnsiChar): Integer cdecl;
    // GIT_EXTERN(void) git_repository_free(git_repository *repo);
    git_repository_free:                procedure (repo: Pgit_repository) cdecl;
-   // GIT_EXTERN(void) git_repository_free__no_gc(git_repository *repo);
-   git_repository_free__no_gc:         procedure (repo: Pgit_repository) cdecl;
+   // GIT_EXTERN(void) git_repository_close(git_repository *repo);
+   // TODO : git_repository_close not exposed
+//   git_repository_close:               procedure (repo: Pgit_repository) cdecl;
    // GIT_EXTERN(int) git_repository_open2(git_repository **repository, const char *git_dir, const char *git_object_directory, const char *git_index_file, const char *git_work_tree);
    git_repository_open2:               function (var repository: Pgit_repository; const git_dir, git_object_directory, git_index_file, git_work_tree: PAnsiChar): Integer cdecl;
    // GIT_EXTERN(int) git_repository_open3(git_repository **repository, const char *git_dir, git_odb *object_database, const char *git_index_file, const char *git_work_tree);
@@ -1018,14 +826,14 @@ var
    git_revwalk_free:                   procedure (walk: Pgit_revwalk) cdecl;
    // GIT_EXTERN(int) git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode);
    git_revwalk_sorting:                function (walk: Pgit_revwalk; sort_mode: UInt): Integer cdecl;
-   // GIT_EXTERN(int) git_revwalk_push(git_revwalk *walk, git_commit *commit);
-   git_revwalk_push:                   function (walk: Pgit_revwalk; commit: Pgit_commit): Integer cdecl;
-   // GIT_EXTERN(int) git_revwalk_next(git_commit **commit, git_revwalk *walk);
-   git_revwalk_next:                   function (var commit: Pgit_commit; walk: Pgit_revwalk): Integer cdecl;
+   // GIT_EXTERN(int) git_revwalk_push(git_revwalk *walk, const git_oid *oid);
+   git_revwalk_push:                   function (walk: Pgit_revwalk; const oid: Pgit_oid): Integer cdecl;
+   // GIT_EXTERN(int) git_revwalk_next(git_oid *oid, git_revwalk *walk);
+   git_revwalk_next:                   function (oid: Pgit_oid; walk: Pgit_revwalk): Integer cdecl;
    // GIT_EXTERN(void) git_revwalk_reset(git_revwalk *walker);
    git_revwalk_reset:                  procedure (walker: Pgit_revwalk) cdecl;
-   // GIT_EXTERN(int) git_revwalk_hide(git_revwalk *walk, git_commit *commit);
-   git_revwalk_hide:                   function (walk: Pgit_revwalk; commit: Pgit_commit): Integer cdecl;
+   // GIT_EXTERN(int) git_revwalk_hide(git_revwalk *walk, const git_oid *oid);
+   git_revwalk_hide:                   function (walk: Pgit_revwalk; const oid: Pgit_oid): Integer cdecl;
    // GIT_EXTERN(git_repository *) git_revwalk_repository(git_revwalk *walk);
    git_revwalk_repository:             function (walk: Pgit_revwalk): Pgit_repository cdecl;
 
@@ -1040,8 +848,10 @@ var
    git_tag_name:                       function (t: Pgit_tag): PAnsiChar cdecl;
    // GIT_EXTERN(git_otype) git_tag_type(git_tag *t);
    git_tag_type:                       function (t: Pgit_tag): git_otype cdecl;
-   // GIT_EXTERN(const git_object *) git_tag_target(git_tag *t);
-   git_tag_target:                     function (t: Pgit_tag): Pgit_object cdecl;
+   // GIT_EXTERN(const git_oid *)    git_tag_target_oid(git_tag *t);
+   git_tag_target_oid:                 function (t: Pgit_tag): Pgit_oid cdecl;
+   // +GIT_EXTERN(int) git_tag_target(git_object **target, git_tag *t);
+   git_tag_target:                     function (var target: Pgit_object; t: Pgit_tag): Integer cdecl;
    // GIT_EXTERN(const git_oid *) git_tag_id(git_tag *tag);
    git_tag_id:                         function (tag: Pgit_tag): Pgit_oid cdecl;
    // GIT_EXTERN(void) git_tag_set_name(git_tag *tag, const char *name);
@@ -1050,8 +860,8 @@ var
    git_tag_tagger:                     function (t: Pgit_tag): Pgit_signature cdecl;
    // GIT_EXTERN(const char *) git_tag_message(git_tag *t);
    git_tag_message:                    function (t: Pgit_tag): PAnsiChar cdecl;
-   // GIT_EXTERN(void) git_tag_set_target(git_tag *tag, git_object *target);
-   git_tag_set_target:                 procedure (tag: Pgit_tag; target: Pgit_object) cdecl;
+   // GIT_EXTERN(int) git_tag_set_target(git_tag *tag, git_object *target);
+   git_tag_set_target:                 function (tag: Pgit_tag; target: Pgit_object): Integer cdecl;
    // GIT_EXTERN(void) git_tag_set_tagger(git_tag *tag, const git_signature *tagger_sig);
    git_tag_set_tagger:                 procedure (tag: Pgit_tag; const tagger_sig: Pgit_signature) cdecl;
    // GIT_EXTERN(void) git_tag_set_message(git_tag *tag, const char *message);
@@ -1108,6 +918,8 @@ var
    git_reference_set_target:           function (ref: Pgit_reference; const target: PAnsiChar): Integer cdecl;
    // GIT_EXTERN(int) git_reference_set_oid(git_reference *ref, const git_oid *id);
    git_reference_set_oid:              function (ref: Pgit_reference; const id: Pgit_oid): Integer cdecl;
+   // +GIT_EXTERN(int) git_reference_listall(git_strarray *array, git_repository *repo, unsigned int list_flags);
+   git_reference_listall:              function (array_: Pgit_strarray; repo: Pgit_repository; list_flags: UInt): Integer cdecl;
 
    // GIT_EXTERN(int) git_reference_lookup(git_reference **reference_out, git_repository *repo, const char *name);
    git_reference_lookup:               function (var reference_out: Pgit_reference; repo: Pgit_repository; const name: PAnsiChar): Integer cdecl;
@@ -1326,10 +1138,11 @@ begin
       git_reference_create_symbolic             := Bind('git_reference_create_symbolic');
       git_reference_delete                      := Bind('git_reference_delete');
       git_reference_packall                     := Bind('git_reference_packall');
+      git_reference_listall                     := Bind('git_reference_listall');
 
       git_repository_open                       := Bind('git_repository_open');
       git_repository_free                       := Bind('git_repository_free');
-      git_repository_free__no_gc                := Bind('git_repository_free__no_gc');
+//      git_repository_close                      := Bind('git_repository_close');
       git_repository_open2                      := Bind('git_repository_open2');
       git_repository_open3                      := Bind('git_repository_open3');
       git_repository_database                   := Bind('git_repository_database');
@@ -1351,6 +1164,7 @@ begin
 
       git_tag_name                              := Bind('git_tag_name');
       git_tag_type                              := Bind('git_tag_type');
+      git_tag_target_oid                        := Bind('git_tag_target_oid');
       git_tag_target                            := Bind('git_tag_target');
       git_tag_id                                := Bind('git_tag_id');
       git_tag_set_name                          := Bind('git_tag_set_name');
@@ -1481,10 +1295,11 @@ begin
     git_reference_create_symbolic             := nil;
     git_reference_delete                      := nil;
     git_reference_packall                     := nil;
+    git_reference_listall                     := nil;
 
     git_repository_open                       := nil;
     git_repository_free                       := nil;
-    git_repository_free__no_gc                := nil;
+//    git_repository_close                      := nil;
     git_repository_open2                      := nil;
     git_repository_open3                      := nil;
     git_repository_database                   := nil;
@@ -1506,6 +1321,7 @@ begin
 
     git_tag_name                              := nil;
     git_tag_type                              := nil;
+    git_tag_target_oid                        := nil;
     git_tag_target                            := nil;
     git_tag_id                                := nil;
     git_tag_set_name                          := nil;

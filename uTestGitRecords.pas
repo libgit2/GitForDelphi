@@ -9,22 +9,19 @@ type
    TTestGitRecords = class(TTestCase)
       procedure Test_sizes;
 
-      procedure Test_git_pack;
-      procedure Test_git_packlist;
-      procedure Test_git_revwalk;
       procedure Test_git_index;
       procedure Test_git_rawobj;
       procedure Test_git_map;
       procedure Test_git_odb;
       procedure Test_git_tag;
       procedure Test_git_vector;
-      procedure Test_pack_backend;
       procedure Test_git_odb_backend;
       procedure Test_git_commit;
       procedure Test_git_time;
       procedure Test_git_signature;
       procedure Test_git_reference;
       procedure Test_git_object;
+      procedure Test_git_repository;
    end;
 
 implementation
@@ -40,8 +37,8 @@ procedure TTestGitRecords.Test_git_commit;
      item: git_commit;
    begin
      if      Value = 'object_'            then Result := Integer(@item.object_) - Integer(@item)
-     else if Value = 'parents'            then Result := Integer(@item.parents) - Integer(@item)
-     else if Value = 'tree'               then Result := Integer(@item.tree) - Integer(@item)
+     else if Value = 'parent_oids'        then Result := Integer(@item.parent_oids) - Integer(@item)
+     else if Value = 'tree_oid'           then Result := Integer(@item.tree_oid) - Integer(@item)
      else if Value = 'author'             then Result := Integer(@item.author) - Integer(@item)
      else if Value = 'committer'          then Result := Integer(@item.committer) - Integer(@item)
      else if Value = 'message_'           then Result := Integer(@item.message_) - Integer(@item)
@@ -49,15 +46,15 @@ procedure TTestGitRecords.Test_git_commit;
      else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
    end;
 begin
-   CheckEquals(96, sizeof(git_commit),             'git_commit');
+   CheckEquals(112, sizeof(git_commit),             'git_commit');
 
    CheckEquals(  0, offsetof('object_'),           'object_');
-   CheckEquals( 52, offsetof('parents'),           'parents');
-   CheckEquals( 72, offsetof('tree'),              'tree');
-   CheckEquals( 76, offsetof('author'),            'author');
-   CheckEquals( 80, offsetof('committer'),         'committer');
-   CheckEquals( 84, offsetof('message_'),          'message_');
-   CheckEquals( 88, offsetof('message_short'),     'message_short');
+   CheckEquals( 56, offsetof('parent_oids'),       'parent_oids');
+   CheckEquals( 76, offsetof('tree_oid'),          'tree_oid');
+   CheckEquals( 96, offsetof('author'),            'author');
+   CheckEquals(100, offsetof('committer'),         'committer');
+   CheckEquals(104, offsetof('message_'),          'message_');
+   CheckEquals(108, offsetof('message_short'),     'message_short');
 end;
 
 procedure TTestGitRecords.Test_git_index;
@@ -109,20 +106,24 @@ procedure TTestGitRecords.Test_git_object;
       if      Value = 'id'                then Result := Integer(@item.id) - Integer(@item)
       else if Value = 'repo'              then Result := Integer(@item.repo) - Integer(@item)
       else if Value = 'source'            then Result := Integer(@item.source) - Integer(@item)
-      else if Value = 'refcount'          then Result := Integer(@item.refcount) - Integer(@item)
+      else if Value = 'lru'               then Result := Integer(@item.lru) - Integer(@item)
       else if Value = 'in_memory'         then Result := Integer(@item.in_memory) - Integer(@item)
       else if Value = 'modified'          then Result := Integer(@item.modified) - Integer(@item)
+      else if Value = 'can_free'          then Result := Integer(@item.can_free) - Integer(@item)
+      else if Value = '_pad'              then Result := Integer(@item._pad) - Integer(@item)
       else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
    end;
 begin
-   CheckEquals( 52, sizeof(git_object),             'git_object');
+   CheckEquals( 56, sizeof(git_object),             'git_object');
 
    CheckEquals(  0, offsetof('id'),                 'id');
    CheckEquals( 20, offsetof('repo'),               'repo');
    CheckEquals( 24, offsetof('source'),             'source');
-   CheckEquals( 48, offsetof('refcount'),           'refcount');
-   CheckEquals( 50, offsetof('in_memory'),          'in_memory');
-   CheckEquals( 51, offsetof('modified'),           'modified');
+   CheckEquals( 48, offsetof('lru'),                'lru');
+   CheckEquals( 52, offsetof('in_memory'),          'in_memory');
+   CheckEquals( 53, offsetof('modified'),           'modified');
+   CheckEquals( 54, offsetof('can_free'),           'can_free');
+   CheckEquals( 55, offsetof('_pad'),               '_pad');
 end;
 
 procedure TTestGitRecords.Test_git_odb;
@@ -165,81 +166,6 @@ begin
    CheckEquals( 20, offsetof('free'),              'free');
 end;
 
-procedure TTestGitRecords.Test_git_pack;
-   function offsetof(const Value: string): Integer;
-   var
-     item: git_pack;
-   begin
-     if      Value = 'backend'            then Result := Integer(@item.backend) - Integer(@Item)
-     else if Value = 'lock'               then Result := Integer(@item.lock) - Integer(@Item)
-     else if Value = 'idx_search'         then Result := Integer(@item.idx_search) - Integer(@Item)
-     else if Value = 'idx_search_offset'  then Result := Integer(@item.idx_search_offset) - Integer(@Item)
-     else if Value = 'idx_get'            then Result := Integer(@item.idx_get) - Integer(@Item)
-     else if Value = 'idx_fd'             then Result := Integer(@item.idx_fd) - Integer(@Item)
-     else if Value = 'idx_map'            then Result := Integer(@item.idx_map) - Integer(@Item)
-     else if Value = 'im_fanout'          then Result := Integer(@item.im_fanout) - Integer(@Item)
-     else if Value = 'im_oid'             then Result := Integer(@item.im_oid) - Integer(@Item)
-     else if Value = 'im_crc'             then Result := Integer(@item.im_crc) - Integer(@Item)
-     else if Value = 'im_offset32'        then Result := Integer(@item.im_offset32) - Integer(@Item)
-     else if Value = 'im_offset64'        then Result := Integer(@item.im_offset64) - Integer(@Item)
-     else if Value = 'im_off_idx'         then Result := Integer(@item.im_off_idx) - Integer(@Item)
-     else if Value = 'im_off_next'        then Result := Integer(@item.im_off_next) - Integer(@Item)
-     else if Value = 'obj_cnt'            then Result := Integer(@item.obj_cnt) - Integer(@Item)
-     else if Value = 'pack_fd'            then Result := Integer(@item.pack_fd) - Integer(@Item)
-     else if Value = 'pack_map'           then Result := Integer(@item.pack_map) - Integer(@Item)
-     else if Value = 'pack_size'          then Result := Integer(@item.pack_size) - Integer(@Item)
-     else if Value = 'pack_mtime'         then Result := Integer(@item.pack_mtime) - Integer(@Item)
-     else if Value = 'refcnt'             then Result := Integer(@item.refcnt) - Integer(@Item)
-     else if Value = 'idxcnt'             then Result := Integer(@item.idxcnt) - Integer(@Item)
-     else if Value = 'invalid'            then Result := Integer(@item.invalid) - Integer(@Item)
-     else if Value = 'pack_name'          then Result := Integer(@item.pack_name) - Integer(@item)
-     else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
-   end;
-begin
-  CheckEquals(168, sizeof(git_pack),               'git_pack size');
-
-  CheckEquals(  0, offsetof('backend'),            'backend');
-  CheckEquals(  4, offsetof('lock'),               'lock');
-  CheckEquals(  8, offsetof('idx_search'),         'idx_search');
-  CheckEquals( 12, offsetof('idx_search_offset'),  'idx_search_offset');
-  CheckEquals( 16, offsetof('idx_get'),            'idx_get');
-  CheckEquals( 20, offsetof('idx_fd'),             'idx_fd');
-  CheckEquals( 24, offsetof('idx_map'),            'idx_map');
-  CheckEquals( 36, offsetof('im_fanout'),          'im_fanout');
-  CheckEquals( 40, offsetof('im_oid'),             'im_oid');
-  CheckEquals( 44, offsetof('im_crc'),             'im_crc');
-  CheckEquals( 48, offsetof('im_offset32'),        'im_offset32');
-  CheckEquals( 52, offsetof('im_offset64'),        'im_offset64');
-  CheckEquals( 56, offsetof('im_off_idx'),         'im_off_idx');
-  CheckEquals( 60, offsetof('im_off_next'),        'im_off_next');
-  CheckEquals( 64, offsetof('obj_cnt'),            'obj_cnt');
-  CheckEquals( 68, offsetof('pack_fd'),            'pack_fd');
-  CheckEquals( 72, offsetof('pack_map'),           'pack_map');
-  CheckEquals( 88, offsetof('pack_size'),          'pack_size');
-  CheckEquals( 96, offsetof('pack_mtime'),         'pack_mtime');
-  CheckEquals(104, offsetof('refcnt'),             'refcnt');
-  CheckEquals(108, offsetof('idxcnt'),             'idxcnt');
-  CheckEquals(116, offsetof('pack_name'),          'pack_name');
-end;
-
-procedure TTestGitRecords.Test_git_packlist;
-   function offsetof(const Value: string): Integer;
-   var
-     item: git_packlist;
-   begin
-     if      Value = 'n_packs'            then Result := Integer(@item.n_packs) - Integer(@item)
-     else if Value = 'refcnt'             then Result := Integer(@item.refcnt) - Integer(@item)
-     else if Value = 'packs'              then Result := Integer(@item.packs) - Integer(@item)
-     else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
-   end;
-begin
-   CheckEquals( 12, sizeof(git_packlist),           'git_packlist');
-
-   CheckEquals(  0, offsetof('n_packs'),               'n_packs');
-   CheckEquals(  4, offsetof('refcnt'),                'refcnt');
-   CheckEquals(  8, offsetof('packs'),                 'packs');
-end;
-
 procedure TTestGitRecords.Test_git_rawobj;
    function offsetof(const Value: string): Integer;
    var
@@ -278,30 +204,37 @@ begin
    CheckEquals(  8, offsetof('type_'),      'type_');
 end;
 
-procedure TTestGitRecords.Test_git_revwalk;
+procedure TTestGitRecords.Test_git_repository;
    function offsetof(const Value: string): Integer;
    var
-     item: git_revwalk;
+     item: git_repository;
    begin
-     if Value = 'repo'               then Result := Integer(@item.repo) - Integer(@item)
+     if      Value = 'db'                 then Result := Integer(@item.db) - Integer(@item)
+     else if Value = 'index'              then Result := Integer(@item.index) - Integer(@item)
+     else if Value = 'objects'            then Result := Integer(@item.objects) - Integer(@item)
+     else if Value = 'memory_objects'     then Result := Integer(@item.memory_objects) - Integer(@item)
+     else if Value = 'references'         then Result := Integer(@item.references) - Integer(@item)
+     else if Value = 'path_repository'    then Result := Integer(@item.path_repository) - Integer(@item)
+     else if Value = 'path_index'         then Result := Integer(@item.path_index) - Integer(@item)
+     else if Value = 'path_odb'           then Result := Integer(@item.path_odb) - Integer(@item)
+     else if Value = 'path_workdir'       then Result := Integer(@item.path_workdir) - Integer(@item)
+     else if Value = 'lru_counter'        then Result := Integer(@item.lru_counter) - Integer(@item)
 
-     else if Value = 'commits'            then Result := Integer(@item.commits) - Integer(@item)
-     else if Value = 'iterator'           then Result := Integer(@item.iterator) - Integer(@item)
-
-     else if Value = 'next'               then Result := Integer(@item.next) - Integer(@item)
-
-     else if Value = 'walking'            then Result := Integer(@item.walking) - Integer(@item)
-     else if Value = 'sorting'            then Result := Integer(@item.sorting) - Integer(@item)
      else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
    end;
 begin
-   CheckEquals( 32, sizeof(git_revwalk),    'git_revwalk size');
+   CheckEquals( 64, sizeof(git_repository), 'git_repository size');
 
-   CheckEquals(  0, offsetof('repo'),       'repo');
-   CheckEquals(  4, offsetof('commits'),    'commits');
-   CheckEquals(  8, offsetof('iterator'),   'iterator');
-   CheckEquals( 20, offsetof('next'),       'next');
-   CheckEquals( 28, offsetof('sorting'),    'sorting');
+   CheckEquals(  0, offsetof('db'),                'db');
+   CheckEquals(  4, offsetof('index'),             'index');
+   CheckEquals(  8, offsetof('objects'),           'objects');
+   CheckEquals( 12, offsetof('memory_objects'),    'memory_objects');
+   CheckEquals( 32, offsetof('references'),        'references');
+   CheckEquals( 40, offsetof('path_repository'),   'path_repository');
+   CheckEquals( 44, offsetof('path_index'),        'path_index');
+   CheckEquals( 48, offsetof('path_odb'),          'path_odb');
+   CheckEquals( 52, offsetof('path_workdir'),      'path_workdir');
+   CheckEquals( 60, offsetof('lru_counter'),       'lru_counter');
 end;
 
 procedure TTestGitRecords.Test_git_signature;
@@ -336,14 +269,14 @@ procedure TTestGitRecords.Test_git_tag;
      else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
    end;
 begin
-   CheckEquals( 72, sizeof(git_tag),               'git_tag size');
+   CheckEquals( 92, sizeof(git_tag),               'git_tag size');
 
    CheckEquals(  0, offsetof('object_'),           'object_');
-   CheckEquals( 52, offsetof('target'),            'target');
-   CheckEquals( 56, offsetof('type_'),             'type_');
-   CheckEquals( 60, offsetof('tag_name'),          'tag_name');
-   CheckEquals( 64, offsetof('tagger'),            'tagger');
-   CheckEquals( 68, offsetof('message_'),          'message_');
+   CheckEquals( 56, offsetof('target'),            'target');
+   CheckEquals( 76, offsetof('type_'),             'type_');
+   CheckEquals( 80, offsetof('tag_name'),          'tag_name');
+   CheckEquals( 84, offsetof('tagger'),            'tagger');
+   CheckEquals( 88, offsetof('message_'),          'message_');
 end;
 
 procedure TTestGitRecords.Test_git_time;
@@ -385,26 +318,6 @@ begin
    CheckEquals( 16, offsetof('sorted'),            'sorted');
 end;
 
-procedure TTestGitRecords.Test_pack_backend;
-   function offsetof(const Value: string): Integer;
-   var
-     item: pack_backend;
-   begin
-     if      Value = 'parent'             then Result := Integer(@item.parent) - Integer(@item)
-     else if Value = 'lock'               then Result := Integer(@item.lock) - Integer(@item)
-     else if Value = 'objects_dir'        then Result := Integer(@item.objects_dir) - Integer(@item)
-     else if Value = 'packlist'           then Result := Integer(@item.packlist) - Integer(@item)
-     else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
-   end;
-begin
-   CheckEquals( 36, sizeof(pack_backend),          'pack_backend size');
-
-   CheckEquals(  0, offsetof('parent'),            'parent');
-   CheckEquals( 24, offsetof('lock'),              'lock');
-   CheckEquals( 28, offsetof('objects_dir'),       'objects_dir');
-   CheckEquals( 32, offsetof('packlist'),          'packlist');
-end;
-
 procedure TTestGitRecords.Test_sizes;
 begin
    CheckEquals(  4, sizeof(size_t),                 'size_t');
@@ -420,13 +333,9 @@ begin
    CheckEquals( 48, sizeof(git_index),              'git_index');
    CheckEquals(  8, sizeof(git_hashtable_node),     'git_hashtable_node');
    CheckEquals( 28, sizeof(git_hashtable),          'git_hashtable');
-   CheckEquals( 60, sizeof(git_repository),         'git_repository');
    CheckEquals( 24, sizeof(git_odb_source),         'git_odb_source');
    CheckEquals( 32, sizeof(git_tree_entry),         'git_tree_entry');
-   CheckEquals( 72, sizeof(git_tree),               'git_tree');
-   CheckEquals( 12, sizeof(git_revwalk_listnode),   'git_revwalk_listnode');
-   CheckEquals( 12, sizeof(git_revwalk_list),       'git_revwalk_list');
-   CheckEquals( 24, sizeof(git_revwalk_commit),     'git_revwalk_commit');
+   CheckEquals( 76, sizeof(git_tree),               'git_tree');
    CheckEquals(  8, sizeof(git_refcache),           'git_refcache');
 end;
 

@@ -63,12 +63,12 @@ begin
       p := 0;
       while p < parents do
       begin
-         parent := git_commit_parent(commit, p);
+         must_pass(git_commit_parent(parent, commit, p));
          CheckTrue(parent <> nil, 'parent <> nil');
          CheckTrue(git_commit_author(parent) <> nil, 'git_commit_author(parent) <> nil'); // is it really a commit?
          Inc(p);
       end;
-      CheckTrue(git_commit_parent(commit, parents) = nil, 'git_commit_parent(commit, parents) = nil');
+      must_fail(git_commit_parent(parent, commit, parents));
    end;
 
    git_repository_free(repo);

@@ -51,12 +51,12 @@ const
    commit_count = 6;
    result_bytes = 24;
 
-   function get_commit_index(commit: Pgit_commit): Integer;
+   function get_commit_index(raw_oid: Pgit_oid): Integer;
    var
       i: Integer;
       oid: array[0..39] of AnsiChar;
    begin
-      git_oid_fmt(oid, @commit.object_.id);
+      git_oid_fmt(oid, raw_oid);
 
       for i := 0 to commit_count - 1 do
       begin
@@ -71,27 +71,33 @@ const
    end;
 
 
-   function test_walk(walk: Pgit_revwalk; start_from: Pgit_commit;
+   function test_walk(walk: Pgit_revwalk;
          flags: Integer; const possible_results: array of TArray6; results_count: Integer): Integer;
    var
-      commit: Pgit_commit;
+      oid: git_oid;
 
       ret, i: Integer;
       result_array: array [0..commit_count-1] of Integer;
    begin
+      git_revwalk_reset(walk);
       git_revwalk_sorting(walk, flags);
-      git_revwalk_push(walk, start_from);
 
       for i := 0 to commit_count - 1 do
          result_array[i] := -1;
 
       i := 0;
-      ret := git_revwalk_next(commit, walk);
+      ret := git_revwalk_next(@oid, walk);
       while (ret = GIT_SUCCESS) do
       begin
-         result_array[i] := get_commit_index(commit);
-         ret := git_revwalk_next(commit, walk);
+         result_array[i] := get_commit_index(@oid);
+         (*{
+            char str[41];
+            git_oid_fmt(str, &oid);
+            str[40] = 0;
+            printf("  %d) %s\n", i, str);
+         }*)
          Inc(i);
+         ret := git_revwalk_next(@oid, walk);
       end;
 
       for i := 0 to results_count - 1 do
@@ -110,38 +116,23 @@ var
    id: git_oid;
    repo: Pgit_repository;
    walk: Pgit_revwalk;
-   head: Pgit_commit;
 begin
    repo := nil;
-   head := nil;
 
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
    must_pass(git_revwalk_new(walk, repo));
 
    git_oid_mkstr(@id, commit_head);
+   git_revwalk_push(walk, @id);
 
-   must_pass(git_commit_lookup(head, repo, @id));
+   must_pass(test_walk(walk, GIT_SORT_TIME, commit_sorting_time, 1));
 
-   must_pass(test_walk(walk, head,
-            GIT_SORT_TIME,
-            commit_sorting_time, 1)
-   );
+   must_pass(test_walk(walk, GIT_SORT_TOPOLOGICAL, commit_sorting_topo, 2));
 
-   must_pass(test_walk(walk, head,
-            GIT_SORT_TOPOLOGICAL,
-            commit_sorting_topo, 2)
-   );
+   must_pass(test_walk(walk, GIT_SORT_TIME or GIT_SORT_REVERSE, commit_sorting_time_reverse, 1));
 
-   must_pass(test_walk(walk, head,
-            GIT_SORT_TIME or GIT_SORT_REVERSE,
-            commit_sorting_time_reverse, 1)
-   );
-
-   must_pass(test_walk(walk, head,
-            GIT_SORT_TOPOLOGICAL or GIT_SORT_REVERSE,
-            commit_sorting_topo_reverse, 2)
-   );
+   must_pass(test_walk(walk, GIT_SORT_TOPOLOGICAL or GIT_SORT_REVERSE, commit_sorting_topo_reverse, 2));
 
    git_revwalk_free(walk);
    git_repository_free(repo);

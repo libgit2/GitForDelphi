@@ -47,6 +47,10 @@ type
       procedure delete_reference_deletes_both_packed_and_loose;
    end;
 
+   Test10_refs_list = class(TTestFromLibGit2)
+      procedure list_all_the_references_in_our_test_repo;
+   end;
+
 implementation
 
 const
@@ -616,6 +620,22 @@ begin
    close_temp_repo(repo);
 end;
 
+{ Test10_refs_list }
+
+procedure Test10_refs_list.list_all_the_references_in_our_test_repo;
+var
+   repo: Pgit_repository;
+   ref_list: git_strarray;
+begin
+   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
+   must_pass(git_reference_listall(@ref_list, repo, GIT_REF_LISTALL));
+   must_be_true(ref_list.count = 8); //* 8 refs in total if we include the packed ones */
+
+   // TODO : git_strarray_free not exposed, no way to free memory
+//   git_strarray_free(ref_list);
+   git_repository_free(repo);
+end;
+
 initialization
    RegisterTest('From libgit2.t10-refs', Test10_refs_readtag.Suite);
    RegisterTest('From libgit2.t10-refs', Test10_refs_readsymref.Suite);
@@ -624,6 +644,7 @@ initialization
    RegisterTest('From libgit2.t10-refs', Test10_refs_packfile.Suite);
    RegisterTest('From libgit2.t10-refs', Test10_refs_rename.Suite);
    RegisterTest('From libgit2.t10-refs', Test10_refs_delete.Suite);
+   RegisterTest('From libgit2.t10-refs', Test10_refs_list.Suite);
 
 end.
 

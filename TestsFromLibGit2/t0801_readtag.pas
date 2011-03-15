@@ -33,12 +33,12 @@ begin
    CheckTrue(StrComp(git_tag_name(tag1), 'test') = 0);
    CheckTrue(git_tag_type(tag1) = GIT_OBJ_TAG);
 
-   tag2 := Pgit_tag(git_tag_target(tag1));
+   must_pass(git_tag_target(Pgit_object(tag2), tag1));
    CheckTrue(tag2 <> nil);
 
    CheckTrue(git_oid_cmp(@id2, git_tag_id(tag2)) = 0);
 
-   commit := Pgit_commit(git_tag_target(tag2));
+   must_pass(git_tag_target(Pgit_object(commit), tag2));
    CheckTrue(commit <> nil);
 
    CheckTrue(git_oid_cmp(@id_commit, git_commit_id(commit)) = 0);
