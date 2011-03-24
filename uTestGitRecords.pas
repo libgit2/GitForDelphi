@@ -10,7 +10,6 @@ type
       procedure Test_sizes;
 
       procedure Test_git_index;
-      procedure Test_git_rawobj;
       procedure Test_git_map;
       procedure Test_git_odb;
       procedure Test_git_tag;
@@ -20,8 +19,6 @@ type
       procedure Test_git_time;
       procedure Test_git_signature;
       procedure Test_git_reference;
-      procedure Test_git_object;
-      procedure Test_git_repository;
    end;
 
 implementation
@@ -98,34 +95,6 @@ begin
    CheckEquals(  8, offsetof('fmh'),       'fmh');
 end;
 
-procedure TTestGitRecords.Test_git_object;
-   function offsetof(const Value: string): Integer;
-   var
-      item: git_object;
-   begin
-      if      Value = 'id'                then Result := Integer(@item.id) - Integer(@item)
-      else if Value = 'repo'              then Result := Integer(@item.repo) - Integer(@item)
-      else if Value = 'source'            then Result := Integer(@item.source) - Integer(@item)
-      else if Value = 'lru'               then Result := Integer(@item.lru) - Integer(@item)
-      else if Value = 'in_memory'         then Result := Integer(@item.in_memory) - Integer(@item)
-      else if Value = 'modified'          then Result := Integer(@item.modified) - Integer(@item)
-      else if Value = 'can_free'          then Result := Integer(@item.can_free) - Integer(@item)
-      else if Value = '_pad'              then Result := Integer(@item._pad) - Integer(@item)
-      else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
-   end;
-begin
-   CheckEquals( 56, sizeof(git_object),             'git_object');
-
-   CheckEquals(  0, offsetof('id'),                 'id');
-   CheckEquals( 20, offsetof('repo'),               'repo');
-   CheckEquals( 24, offsetof('source'),             'source');
-   CheckEquals( 48, offsetof('lru'),                'lru');
-   CheckEquals( 52, offsetof('in_memory'),          'in_memory');
-   CheckEquals( 53, offsetof('modified'),           'modified');
-   CheckEquals( 54, offsetof('can_free'),           'can_free');
-   CheckEquals( 55, offsetof('_pad'),               '_pad');
-end;
-
 procedure TTestGitRecords.Test_git_odb;
    function offsetof(const Value: string): Integer;
    var
@@ -166,24 +135,6 @@ begin
    CheckEquals( 20, offsetof('free'),              'free');
 end;
 
-procedure TTestGitRecords.Test_git_rawobj;
-   function offsetof(const Value: string): Integer;
-   var
-     item: git_rawobj;
-   begin
-     if      Value = 'data'               then Result := Integer(@item.data) - Integer(@item)
-     else if Value = 'len'                then Result := Integer(@item.len) - Integer(@item)
-     else if Value = 'type_'              then Result := Integer(@item.type_) - Integer(@item)
-     else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
-   end;
-begin
-   CheckEquals( 12, sizeof(git_rawobj),    'git_rawobj size');
-
-   CheckEquals(  0, offsetof('data'),      'data');
-   CheckEquals(  4, offsetof('len'),       'len');
-   CheckEquals(  8, offsetof('type_'),     'type_');
-end;
-
 procedure TTestGitRecords.Test_git_reference;
    function offsetof(const Value: string): Integer;
    var
@@ -202,39 +153,6 @@ begin
    CheckEquals(  0, offsetof('owner'),      'owner');
    CheckEquals(  4, offsetof('name'),       'name');
    CheckEquals(  8, offsetof('type_'),      'type_');
-end;
-
-procedure TTestGitRecords.Test_git_repository;
-   function offsetof(const Value: string): Integer;
-   var
-     item: git_repository;
-   begin
-     if      Value = 'db'                 then Result := Integer(@item.db) - Integer(@item)
-     else if Value = 'index'              then Result := Integer(@item.index) - Integer(@item)
-     else if Value = 'objects'            then Result := Integer(@item.objects) - Integer(@item)
-     else if Value = 'memory_objects'     then Result := Integer(@item.memory_objects) - Integer(@item)
-     else if Value = 'references'         then Result := Integer(@item.references) - Integer(@item)
-     else if Value = 'path_repository'    then Result := Integer(@item.path_repository) - Integer(@item)
-     else if Value = 'path_index'         then Result := Integer(@item.path_index) - Integer(@item)
-     else if Value = 'path_odb'           then Result := Integer(@item.path_odb) - Integer(@item)
-     else if Value = 'path_workdir'       then Result := Integer(@item.path_workdir) - Integer(@item)
-     else if Value = 'lru_counter'        then Result := Integer(@item.lru_counter) - Integer(@item)
-
-     else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
-   end;
-begin
-   CheckEquals( 64, sizeof(git_repository), 'git_repository size');
-
-   CheckEquals(  0, offsetof('db'),                'db');
-   CheckEquals(  4, offsetof('index'),             'index');
-   CheckEquals(  8, offsetof('objects'),           'objects');
-   CheckEquals( 12, offsetof('memory_objects'),    'memory_objects');
-   CheckEquals( 32, offsetof('references'),        'references');
-   CheckEquals( 40, offsetof('path_repository'),   'path_repository');
-   CheckEquals( 44, offsetof('path_index'),        'path_index');
-   CheckEquals( 48, offsetof('path_odb'),          'path_odb');
-   CheckEquals( 52, offsetof('path_workdir'),      'path_workdir');
-   CheckEquals( 60, offsetof('lru_counter'),       'lru_counter');
 end;
 
 procedure TTestGitRecords.Test_git_signature;
@@ -333,7 +251,7 @@ begin
    CheckEquals( 48, sizeof(git_index),              'git_index');
    CheckEquals(  8, sizeof(git_hashtable_node),     'git_hashtable_node');
    CheckEquals( 28, sizeof(git_hashtable),          'git_hashtable');
-   CheckEquals( 24, sizeof(git_odb_source),         'git_odb_source');
+   CheckEquals( 60, sizeof(git_repository),         'git_repository');
    CheckEquals( 32, sizeof(git_tree_entry),         'git_tree_entry');
    CheckEquals( 76, sizeof(git_tree),               'git_tree');
    CheckEquals(  8, sizeof(git_refcache),           'git_refcache');

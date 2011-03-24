@@ -114,6 +114,9 @@ const
 //
 //   /** The state of the reference is not valid */
 //   #define GIT_EINVALIDREFSTATE (GIT_ERROR - 21)
+//
+//   /** This feature has not been implemented yet */
+//   #define GIT_ENOTIMPLEMENTED (GIT_ERROR - 22)
    GIT_SUCCESS                = 0;
    GIT_ERROR                  = -1;
    GIT_ENOTOID                = (GIT_ERROR - 1);
@@ -137,6 +140,7 @@ const
    GIT_EINVALIDPATH           = (GIT_ERROR - 19);
    GIT_EREVWALKOVER           = (GIT_ERROR - 20);
    GIT_EINVALIDREFSTATE       = (GIT_ERROR - 21);
+   GIT_ENOTIMPLEMENTED        = (GIT_ERROR - 22);
 
 //
 //   /**
@@ -189,6 +193,17 @@ const
    GIT_REF_HAS_PEEL  = 8;
    GIT_REF_LISTALL   = GIT_REF_OID or GIT_REF_SYMBOLIC or GIT_REF_PACKED;
 
+//      typedef enum {
+//      GIT_STREAM_RDONLY = (1 << 1),
+//      GIT_STREAM_WRONLY = (1 << 2),
+//      GIT_STREAM_RW = (GIT_STREAM_RDONLY | GIT_STREAM_WRONLY),
+//   } git_odb_streammode;
+
+   GIT_STREAM_RDONLY = (1 shl 1);
+   GIT_STREAM_WRONLY = (1 shl 2);
+   GIT_STREAM_RW     = (GIT_STREAM_RDONLY or GIT_STREAM_WRONLY);
+
+
    GIT_HEAD_FILE:      PAnsiChar = 'HEAD';
    GIT_REFS_HEADS_DIR: PAnsiChar = 'heads/';
    GIT_PACKEDREFS_FILE: PAnsiChar = 'packed-refs';
@@ -200,8 +215,9 @@ type
    git_off_t = Int64;  //  typedef __int64 git_off_t;
    git_time_t = Int64; //  typedef __time64_t git_time_t;
 
-   git_otype = Integer; // enum as constants above
-   git_rtype = Integer;
+   git_otype            = Integer; // enum as constants above
+   git_rtype            = Integer;
+   git_odb_streammode   = Integer;
 
    git_file = Integer;
 
@@ -221,6 +237,7 @@ type
    PPByte = ^PByte;
    Pgit_repository = ^git_repository;
    Pgit_oid = ^git_oid;
+   PPgit_oid = ^Pgit_oid;
    Pgit_odb = ^git_odb;
    PPgit_odb = ^Pgit_odb;
    Pgit_commit = ^git_commit;
@@ -234,18 +251,22 @@ type
    Pgit_index_tree = ^git_index_tree;
    PPgit_index_tree = ^Pgit_index_tree;
    Pgit_signature = ^git_signature;
-   Pgit_odb_source = ^git_odb_source;
    Pgit_object = ^git_object;
    Pgit_tree = ^git_tree;
    Pgit_tree_entry = ^git_tree_entry;
    PPgit_tree_entry = ^Pgit_tree_entry;
-   Pgit_rawobj = ^git_rawobj;
-   Pgit_revwalk = Pointer;
    Pgit_tag = ^git_tag;
    Pgit_blob = ^git_blob;
    Pgit_odb_backend = ^git_odb_backend;
    Pgit_reference = ^git_reference;
    Pgit_strarray = ^git_strarray;
+
+   // structs not translated because they should be internal details,
+   // and not necessary from GitForDelphi
+   Pgit_rawobj       = Pointer;
+   Pgit_odb_object   = Pointer;
+   Pgit_odb_stream   = Pointer;
+   Pgit_revwalk      = Pointer;
 
 //   typedef int (*git_vector_cmp)(const void *, const void *);
    git_vector_cmp = Pointer;
@@ -269,19 +290,32 @@ type
 //      git_odb *odb;
 //
 //      int (* read)(
-//            git_rawobj *,
+//            void **, size_t *, git_otype *,
 //            struct git_odb_backend *,
 //            const git_oid *);
 //
 //      int (* read_header)(
-//            git_rawobj *,
+//            size_t *, git_otype *,
 //            struct git_odb_backend *,
 //            const git_oid *);
 //
 //      int (* write)(
-//            git_oid *id,
+//            git_oid *,
 //            struct git_odb_backend *,
-//            git_rawobj *obj);
+//            const void *,
+//            size_t,
+//            git_otype);
+//
+//      int (* writestream)(
+//            struct git_odb_stream **,
+//            struct git_odb_backend *,
+//            size_t,
+//            git_otype);
+//
+//      int (* readstream)(
+//            struct git_odb_stream **,
+//            struct git_odb_backend *,
+//            const git_oid *);
 //
 //      int (* exists)(
 //            struct git_odb_backend *,
@@ -289,14 +323,24 @@ type
 //
 //      void (* free)(struct git_odb_backend *);
 //   };
+   git_odb_backend_read          = function (var buffer_p: PByte; var len_p: size_t; var type_p: git_otype; backend: Pgit_odb_backend; const oid: Pgit_oid ): Integer; cdecl;
+   git_odb_backend_read_header   = function (var len_p: size_t; var type_p: git_otype; backend: Pgit_odb_backend; const oid: Pgit_oid ): Integer; cdecl;
+   git_odb_backend_write         = function (id: Pgit_oid; backend: Pgit_odb_backend; const data: PByte; len: size_t; type_: git_otype): Integer; cdecl;
+   git_odb_backend_writestream   = function (var stream_out: Pgit_odb_stream; backend: Pgit_odb_backend; length: size_t; type_: git_otype): Integer; cdecl;
+   git_odb_backend_readstream    = function (var stream_out: Pgit_odb_stream; backend: Pgit_odb_backend; const oid: Pgit_oid): Integer; cdecl;
+   git_odb_backend_exists        = function (backend: Pgit_odb_backend; const oid: Pgit_oid): Integer; cdecl;
+   git_odb_backend_free          = procedure (backend: Pgit_odb_backend); cdecl;
+
    git_odb_backend = record
       odb:                                               Pgit_odb;
 
-      read:                                              Pointer;
-      read_header:                                       Pointer;
-      write:                                             Pointer;
-      exists:                                            Pointer;
-      free:                                              Pointer;
+      read:                                              ^git_odb_backend_read;
+      read_header:                                       ^git_odb_backend_read_header;
+      write:                                             ^git_odb_backend_write;
+      writestream:                                       ^git_odb_backend_writestream;
+      readstream:                                        ^git_odb_backend_readstream;
+      exists:                                            ^git_odb_backend_exists;
+      free:                                              ^git_odb_backend_free;
    end;
 
 //   struct git_odb {
@@ -490,45 +534,30 @@ type
    end;
 
 //   typedef struct {
-//      void *data;          /**< Raw, decompressed object data. */
-//      size_t len;          /**< Total number of bytes in data. */
-//      git_otype type;      /**< Type of this object. */
-//   } git_rawobj;
-   git_rawobj = record
-      data:                                              PByte;
-      len:                                               size_t;
-      type_:                                             git_otype;
+//      volatile int val;
+//   } git_atomic;
+   git_atomic = record
+      val:                                               Integer;
    end;
-   
+
 //   typedef struct {
-//      git_rawobj raw;
-//      void *write_ptr;
-//      size_t written_bytes;
-//      int open:1;
-//   } git_odb_source;
-   git_odb_source = record
-      raw:                                               git_rawobj;
-      write_ptr:                                         PByte;
-      written_bytes:                                     size_t;
-      open:                                              Integer;
+//      git_oid oid;
+//      git_atomic refcount;
+//   } git_cached_obj;
+   git_cached_obj = record
+      oid:                                               git_oid;
+      refcount:                                          git_atomic;
    end;
 
 //   struct git_object {
-//      git_oid id;
+//      git_cached_obj cached;
 //      git_repository *repo;
-//      git_odb_source source;
-//      unsigned int lru;
-//      unsigned char in_memory, modified, can_free, _pad;
+//      git_otype type;
 //   };
    git_object = record
-      id:                                                git_oid;
+      cached:                                            git_cached_obj;
       repo:                                              Pgit_repository;
-      source:                                            git_odb_source;
-      lru:                                               UInt;
-      in_memory:                                         Byte;
-      modified:                                          Byte;
-      can_free:                                          Byte;
-      _pad:                                              Byte;
+      type_:                                             git_otype;
    end;
 
 //   struct git_tree_entry {
@@ -661,17 +690,17 @@ type
       count:                                             size_t;
    end;
 
+// TODO : check signatures for all bindings, I somehow missed that some changed
+
 var
-   // GIT_EXTERN(int) git_blob_set_rawcontent_fromfile(git_blob *blob, const char *filename);
-   git_blob_set_rawcontent_fromfile:   function (blob: Pgit_blob; const filename: PAnsiChar): Integer cdecl;
-   // GIT_EXTERN(int) git_blob_set_rawcontent(git_blob *blob, const void *buffer, size_t len);
-   git_blob_set_rawcontent:            function (blob: Pgit_blob; const buffer: PByte; len: size_t): Integer cdecl;
    // GIT_EXTERN(const void *) git_blob_rawcontent(git_blob *blob);
    git_blob_rawcontent:                function (blob: Pgit_blob): PByte cdecl;
    // GIT_EXTERN(int) git_blob_rawsize(git_blob *blob);
    git_blob_rawsize:                   function (blob: Pgit_blob): Integer cdecl;
-   // GIT_EXTERN(int) git_blob_writefile(git_oid *written_id, git_repository *repo, const char *path);
-   git_blob_writefile:                 function (written_id: Pgit_oid; repo: Pgit_repository; const path: PAnsiChar): Integer cdecl;
+   // GIT_EXTERN(int) git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *path);
+   git_blob_create_fromfile:           function (oid: Pgit_oid; repo: Pgit_repository; const path: PAnsiChar): Integer cdecl;
+   // GIT_EXTERN(int) git_blob_create_frombuffer(git_oid *oid, git_repository *repo, const void *buffer, size_t len);
+   git_blob_create_frombuffer:         function (oid: Pgit_oid; repo: Pgit_repository; const buffer: PByte; len: size_t): Integer cdecl;
 
    // GIT_EXTERN(const git_oid *) git_commit_id(git_commit *commit);
    git_commit_id:                      function (commit: Pgit_commit): Pgit_oid cdecl;
@@ -690,19 +719,16 @@ var
    // GIT_EXTERN(int) git_commit_parent(git_commit **parent, git_commit *commit, unsigned int n);
    git_commit_parent:                  function (var parent: Pgit_commit; commit: Pgit_commit; n: UInt): Integer cdecl;
    // GIT_EXTERN(int) git_commit_time_offset(git_commit *commit);
-   git_commit_time_offset:             function (commit: Pgit_commit): Integer cdecl;
-   // GIT_EXTERN(int) git_commit_tree(git_tree **tree_out, git_commit *commit);
-   git_commit_tree:                    function (var tree_out: Pgit_tree; commit: Pgit_commit): Integer cdecl;
-   // GIT_EXTERN(int) git_commit_add_parent(git_commit *commit, git_commit *new_parent);
-   git_commit_add_parent:              function (commit: Pgit_commit; new_parent: Pgit_commit): Integer cdecl;
-   // GIT_EXTERN(void) git_commit_set_message(git_commit *commit, const char *message);
-   git_commit_set_message:             procedure (commit: Pgit_commit; const message_: PAnsiChar) cdecl;
-   // GIT_EXTERN(void) git_commit_set_committer(git_commit *commit, const git_signature *committer_sig);
-   git_commit_set_committer:           procedure (commit: Pgit_commit; const committer_sig: Pgit_signature) cdecl;
-   // GIT_EXTERN(void) git_commit_set_author(git_commit *commit, const git_signature *author_sig);
-   git_commit_set_author:              procedure (commit: Pgit_commit; const author_sig: Pgit_signature) cdecl;
-   // GIT_EXTERN(int) git_commit_set_tree(git_commit *commit, git_tree *tree);
-   git_commit_set_tree:                function (commit: Pgit_commit; tree: Pgit_tree): Integer cdecl;
+   git_commit_time_offset:         function (commit: Pgit_commit): Integer cdecl;
+   // GIT_EXTERN(const git_tree *) git_commit_tree(git_commit *commit);
+   git_commit_tree:                    function (commit: Pgit_commit): Pgit_tree cdecl;
+   // GIT_EXTERN(int) git_commit_create(git_oid *oid, git_repository *repo, const char *update_ref, const git_signature *author, const git_signature *committer, const char *message, const git_oid *tree_oid, int parent_count, const git_oid *parent_oids[]);
+   git_commit_create:                  function (oid: Pgit_oid; repo: Pgit_repository; const update_ref: PAnsiChar; const author, committer: Pgit_signature; const message_: PAnsiChar; const tree_oid: Pgit_oid; parent_count: Integer; const parent_oids: PPgit_oid): Integer cdecl;
+   // GIT_EXTERN(int) git_commit_create_o(git_oid *oid, git_repository *repo, const char *update_ref, const git_signature *author, const git_signature *committer, const char *message, const git_tree *tree, int parent_count, const git_commit *parents[]);
+   git_commit_create_o:                function (oid: Pgit_oid; repo: Pgit_repository; const update_ref: PAnsiChar; const author, committer: Pgit_signature; const message_: PAnsiChar; const tree: Pgit_tree; parent_count: Integer; const parents: PPgit_commit): Integer cdecl;
+
+   // TODO : GIT_EXTERN(int) git_commit_create_v(git_oid *oid, git_repository *repo, const char *update_ref, const git_signature *author, const git_signature *committer, const char *message, const git_oid *tree_oid, int parent_count, ...);
+   // TODO : GIT_EXTERN(int) git_commit_create_ov(git_oid *oid, git_repository *repo, const char *update_ref, const git_signature *author, const git_signature *committer, const char *message, const git_tree *tree, int parent_count, ...);
 
    // GIT_EXTERN(int) git_index_open_bare(git_index **index, const char *index_path);
    git_index_open_bare:                function (var index: Pgit_index; const index_path: PAnsiChar): Integer cdecl;
@@ -731,8 +757,6 @@ var
 
    // GIT_EXTERN(const git_oid *) git_object_id(const git_object *obj);
    git_object_id:                      function (obj: Pgit_object): Pgit_oid cdecl;
-   // GIT_EXTERN(int) git_object_write(git_object *object);
-   git_object_write:                   function (object_: Pgit_object): Integer cdecl;
    // GIT_EXTERN(void) git_object_close(git_object *object);
    git_object_close:                   procedure (object_: Pgit_object) cdecl;
    // GIT_EXTERN(git_otype) git_object_type(const git_object *obj);
@@ -747,8 +771,6 @@ var
    git_object_typeisloose:             function (type_: git_otype): Integer cdecl;
    // GIT_EXTERN(int) git_object_lookup(git_object **object, git_repository *repo, const git_oid *id, git_otype type);
    git_object_lookup:                  function (var object_: Pgit_object; repo: Pgit_repository; const id: Pgit_oid; type_: git_otype): Integer cdecl;
-   // GIT_EXTERN(int) git_object_new(git_object **object, git_repository *repo, git_otype type);
-   git_object_new:                     function (var object_: Pgit_object; repo: Pgit_repository; type_: git_otype): Integer cdecl;
 
    // GIT_EXTERN(int) git_odb_new(git_odb **out);
    git_odb_new:                        function (var out_: Pgit_odb): Integer cdecl;
@@ -760,14 +782,16 @@ var
    git_odb_add_alternate:              function (odb: Pgit_odb; backend: Pgit_odb_backend; priority: Integer): Integer cdecl;
    // GIT_EXTERN(void) git_odb_close(git_odb *db);
    git_odb_close:                      procedure (db: Pgit_odb) cdecl;
-   // GIT_EXTERN(int) git_odb_read(git_rawobj *out, git_odb *db, const git_oid *id);
-   git_odb_read:                       function (out_: Pgit_rawobj; db: Pgit_odb; const id: Pgit_oid): Integer cdecl;
-   // GIT_EXTERN(int) git_odb_read_header(git_rawobj *out, git_odb *db, const git_oid *id);
-   git_odb_read_header:                function (out_: Pgit_rawobj; db: Pgit_odb; const id: Pgit_oid): Integer cdecl;
-   // GIT_EXTERN(int) git_odb_write(git_oid *id, git_odb *db, git_rawobj *obj);
-   git_odb_write:                      function (id: Pgit_oid; db: Pgit_odb; obj: Pgit_rawobj): Integer cdecl;
+   // GIT_EXTERN(int) git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id);
+   git_odb_read:                       function (var out_: Pgit_odb_object; db: Pgit_odb; const id: Pgit_oid): Integer cdecl;
+   // GIT_EXTERN(int) git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git_oid *id);
+   git_odb_read_header:                function (var len_p: size_t; var type_p: git_otype; db: Pgit_odb; const id: Pgit_oid): Integer cdecl;
    // GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id);
    git_odb_exists:                     function (db: Pgit_odb; const id: Pgit_oid): Integer cdecl;
+   // GIT_EXTERN(int) git_odb_open_wstream(git_odb_stream **stream, git_odb *db, size_t size, git_otype type);
+   git_odb_open_wstream:               function (var stream: Pgit_odb_stream; db: Pgit_odb; size: size_t; type_: git_otype): Integer cdecl;
+   // GIT_EXTERN(int) git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oid);
+   git_odb_open_rstream:               function (var stream: Pgit_odb_stream; db: Pgit_odb; const oid: Pgit_oid): Integer cdecl;
 
    // GIT_EXTERN(int) git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir);
    git_odb_backend_pack:               function (var backend_out: Pgit_odb_backend; const objects_dir: PAnsiChar): Integer cdecl;
@@ -779,10 +803,8 @@ var
    // #endif
    _git_odb_backend_sqlite:            function (var backend_out: Pgit_odb_backend; const sqlite_db: PAnsiChar): Integer cdecl;
 
-   // GIT_EXTERN(int) git_rawobj_hash(git_oid *id, git_rawobj *obj);
-   git_rawobj_hash:                    function (id: Pgit_oid; obj: Pgit_rawobj): Integer cdecl;
-   // GIT_EXTERN(void) git_rawobj_close(git_rawobj *obj);
-   git_rawobj_close:                   procedure (obj: Pgit_rawobj) cdecl;
+   // GIT_EXTERN(void) git_odb_object_close(git_odb_object *object);
+   git_odb_object_close:               procedure (object_: Pgit_odb_object) cdecl;
 
    // GIT_EXTERN(int) git_oid_mkstr(git_oid *out, const char *str);
    git_oid_mkstr:                      function (aOut: Pgit_oid; aStr: PAnsiChar): Integer cdecl;
@@ -805,9 +827,6 @@ var
    git_repository_open:                function (var repo_out: Pgit_repository; const path: PAnsiChar): Integer cdecl;
    // GIT_EXTERN(void) git_repository_free(git_repository *repo);
    git_repository_free:                procedure (repo: Pgit_repository) cdecl;
-   // GIT_EXTERN(void) git_repository_close(git_repository *repo);
-   // TODO : git_repository_close not exposed
-//   git_repository_close:               procedure (repo: Pgit_repository) cdecl;
    // GIT_EXTERN(int) git_repository_open2(git_repository **repository, const char *git_dir, const char *git_object_directory, const char *git_index_file, const char *git_work_tree);
    git_repository_open2:               function (var repository: Pgit_repository; const git_dir, git_object_directory, git_index_file, git_work_tree: PAnsiChar): Integer cdecl;
    // GIT_EXTERN(int) git_repository_open3(git_repository **repository, const char *git_dir, git_odb *object_database, const char *git_index_file, const char *git_work_tree);
@@ -848,24 +867,18 @@ var
    git_tag_name:                       function (t: Pgit_tag): PAnsiChar cdecl;
    // GIT_EXTERN(git_otype) git_tag_type(git_tag *t);
    git_tag_type:                       function (t: Pgit_tag): git_otype cdecl;
-   // GIT_EXTERN(const git_oid *)    git_tag_target_oid(git_tag *t);
-   git_tag_target_oid:                 function (t: Pgit_tag): Pgit_oid cdecl;
-   // +GIT_EXTERN(int) git_tag_target(git_object **target, git_tag *t);
+   // GIT_EXTERN(int) git_tag_target(git_object **target, git_tag *t);
    git_tag_target:                     function (var target: Pgit_object; t: Pgit_tag): Integer cdecl;
    // GIT_EXTERN(const git_oid *) git_tag_id(git_tag *tag);
    git_tag_id:                         function (tag: Pgit_tag): Pgit_oid cdecl;
-   // GIT_EXTERN(void) git_tag_set_name(git_tag *tag, const char *name);
-   git_tag_set_name:                   procedure (tag: Pgit_tag; const name: PAnsiChar) cdecl;
    // GIT_EXTERN(const git_signature *) git_tag_tagger(git_tag *t);
    git_tag_tagger:                     function (t: Pgit_tag): Pgit_signature cdecl;
    // GIT_EXTERN(const char *) git_tag_message(git_tag *t);
    git_tag_message:                    function (t: Pgit_tag): PAnsiChar cdecl;
-   // GIT_EXTERN(int) git_tag_set_target(git_tag *tag, git_object *target);
-   git_tag_set_target:                 function (tag: Pgit_tag; target: Pgit_object): Integer cdecl;
-   // GIT_EXTERN(void) git_tag_set_tagger(git_tag *tag, const git_signature *tagger_sig);
-   git_tag_set_tagger:                 procedure (tag: Pgit_tag; const tagger_sig: Pgit_signature) cdecl;
-   // GIT_EXTERN(void) git_tag_set_message(git_tag *tag, const char *message);
-   git_tag_set_message:                procedure (tag: Pgit_tag; const message_: PAnsiChar) cdecl;
+   // GIT_EXTERN(int) git_tag_create(git_oid *oid, git_repository *repo, const char *tag_name, const git_oid *target, git_otype target_type, const git_signature *tagger, const char *message);
+   git_tag_create:                     function (oid: Pgit_oid; repo: Pgit_repository; const tag_name: PAnsiChar; const target: Pgit_oid; target_type: git_otype; const tagger: Pgit_signature; const message_: PAnsiChar): Integer cdecl;
+   // GIT_EXTERN(int) git_tag_create_o(git_oid *oid, git_repository *repo, const char *tag_name, const git_object *target, const git_signature *tagger, const char *message);
+   git_tag_create_o:                   function (oid: Pgit_oid; repo: Pgit_repository; const tag_name: PAnsiChar; const target: Pgit_object; const tagger: Pgit_signature; const message_: PAnsiChar): Integer cdecl;
 
    // GIT_EXTERN(git_tree_entry *) git_tree_entry_byname(git_tree *tree, const char *filename);
    git_tree_entry_byname:              function (tree: Pgit_tree; const filename: PAnsiChar): Pgit_tree_entry cdecl;
@@ -875,28 +888,14 @@ var
    git_tree_entrycount:                function (tree: Pgit_tree): size_t cdecl;
    // GIT_EXTERN(const char *) git_tree_entry_name(git_tree_entry *entry);
    git_tree_entry_name:                function (entry: Pgit_tree_entry): PAnsiChar cdecl;
-   // GIT_EXTERN(int) git_tree_entry_2object(git_object **object, git_tree_entry *entry);
-   git_tree_entry_2object:             function (var object_: Pgit_object; entry: Pgit_tree_entry): Integer cdecl;
-   // GIT_EXTERN(int) git_tree_add_entry(git_tree_entry **entry_out, git_tree *tree, const git_oid *id, const char *filename, int attributes);
-   git_tree_add_entry:                 function (var entry_out: Pgit_tree_entry; tree: Pgit_tree; const id: Pgit_oid; const filename: PAnsiChar; attributes: Integer): Integer cdecl;
-   // GIT_EXTERN(int) git_tree_remove_entry_byindex(git_tree *tree, int idx);
-   git_tree_remove_entry_byindex:      function (tree: Pgit_tree; idx: Integer): Integer cdecl;
-   // GIT_EXTERN(int) git_tree_remove_entry_byname(git_tree *tree, const char *filename);
-   git_tree_remove_entry_byname:       function (tree: Pgit_tree; const filename: PAnsiChar): Integer cdecl;
+   // GIT_EXTERN(int) git_tree_entry_2object(git_object **object_out, git_repository *repo, git_tree_entry *entry);
+   git_tree_entry_2object:             function (var object_out: Pgit_object; repo: Pgit_repository; entry: Pgit_tree_entry): Integer cdecl;
    // GIT_EXTERN(const git_oid *) git_tree_id(git_tree *tree);
    git_tree_id:                        function (tree: Pgit_tree): Pgit_oid cdecl;
    // GIT_EXTERN(unsigned int) git_tree_entry_attributes(git_tree_entry *entry);
    git_tree_entry_attributes:          function (entry: Pgit_tree_entry): UInt cdecl;
    // GIT_EXTERN(const git_oid *) git_tree_entry_id(git_tree_entry *entry);
    git_tree_entry_id:                  function (entry: Pgit_tree_entry): Pgit_oid cdecl;
-   // GIT_EXTERN(void) git_tree_entry_set_id(git_tree_entry *entry, const git_oid *oid);
-   git_tree_entry_set_id:              procedure (entry: Pgit_tree_entry; const oid: Pgit_oid) cdecl;
-   // GIT_EXTERN(void) git_tree_entry_set_name(git_tree_entry *entry, const char *name);
-   git_tree_entry_set_name:            procedure (entry: Pgit_tree_entry; const name: PAnsiChar) cdecl;
-   // GIT_EXTERN(int) git_tree_entry_set_attributes(git_tree_entry *entry, unsigned int attr);
-   git_tree_entry_set_attributes:      function (entry: Pgit_tree_entry; attr: UInt): Integer cdecl;
-   // GIT_EXTERN(void) git_tree_clear_entries(git_tree *tree);
-   git_tree_clear_entries:             procedure (tree: Pgit_tree) cdecl;
 
    // GIT_EXTERN(int) git_reference_create_oid(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id);
    git_reference_create_oid:           function (var ref_out: Pgit_reference; repo: Pgit_repository; const name: PAnsiChar; const id: Pgit_oid): Integer cdecl;
@@ -918,8 +917,10 @@ var
    git_reference_set_target:           function (ref: Pgit_reference; const target: PAnsiChar): Integer cdecl;
    // GIT_EXTERN(int) git_reference_set_oid(git_reference *ref, const git_oid *id);
    git_reference_set_oid:              function (ref: Pgit_reference; const id: Pgit_oid): Integer cdecl;
-   // +GIT_EXTERN(int) git_reference_listall(git_strarray *array, git_repository *repo, unsigned int list_flags);
+   // GIT_EXTERN(int) git_reference_listall(git_strarray *array, git_repository *repo, unsigned int list_flags);
    git_reference_listall:              function (array_: Pgit_strarray; repo: Pgit_repository; list_flags: UInt): Integer cdecl;
+   // GIT_EXTERN(void) git_strarray_free(git_strarray *array);
+   git_strarray_free:                  procedure (array_: Pgit_strarray) cdecl;
 
    // GIT_EXTERN(int) git_reference_lookup(git_reference **reference_out, git_repository *repo, const char *name);
    git_reference_lookup:               function (var reference_out: Pgit_reference; repo: Pgit_repository; const name: PAnsiChar): Integer cdecl;
@@ -933,20 +934,11 @@ var
    // GIT_EXTERN(size_t) git_object__size(git_otype type);
    git_object__size:                   function (type_: git_otype): size_t cdecl;
 
-   // GIT_EXTERN(int) gitfo_prettify_dir_path(char *buffer_out, const char *path);
-   gitfo_prettify_dir_path:            function (buffer_out: PAnsiChar; const path: PAnsiChar): Integer cdecl;
-   // GIT_EXTERN(int) gitfo_prettify_file_path(char *buffer_out, const char *path);
-   gitfo_prettify_file_path:           function (buffer_out: PAnsiChar; const path: PAnsiChar): Integer cdecl;
-
 // GIT_EXTERNs later inlined
 function git_blob_lookup(var blob: Pgit_blob; repo: Pgit_repository; const id: Pgit_oid): Integer cdecl;
-function git_blob_new(var blob: Pgit_blob; repo: Pgit_repository): Integer cdecl;
 function git_commit_lookup(var commit: Pgit_commit; repo: Pgit_repository; const id: Pgit_oid): Integer cdecl;
-function git_commit_new(var commit: Pgit_commit; repo: Pgit_repository): Integer cdecl;
 function git_tag_lookup(var tag: Pgit_tag; repo: Pgit_repository; const id: Pgit_oid): Integer cdecl;
-function git_tag_new(var tag: Pgit_tag; repo: Pgit_repository): Integer cdecl;
 function git_tree_lookup(var tree: Pgit_tree; repo: Pgit_repository; const id: Pgit_oid): Integer cdecl;
-function git_tree_new(var tree: Pgit_tree; repo: Pgit_repository): Integer cdecl;
 
 // Optionally compiled-in functions
 function git_odb_backend_sqlite(var backend_out: Pgit_odb_backend; const sqlite_db: PAnsiChar): Integer cdecl;
@@ -966,22 +958,10 @@ begin
    Result := git_object_lookup(Pgit_object(blob), repo, id, GIT_OBJ_BLOB);
 end;
 
-function git_blob_new(var blob: Pgit_blob; repo: Pgit_repository): Integer cdecl;
-begin
-   // return git_object_new((git_object **)blob, repo, GIT_OBJ_BLOB);
-   Result := git_object_new(Pgit_object(blob), repo, GIT_OBJ_BLOB);
-end;
-
 function git_commit_lookup(var commit: Pgit_commit; repo: Pgit_repository; const id: Pgit_oid): Integer cdecl;
 begin
    // return git_object_lookup((git_object **)commit, repo, id, GIT_OBJ_COMMIT);
    Result := git_object_lookup(Pgit_object(commit), repo, id, GIT_OBJ_COMMIT);
-end;
-
-function git_commit_new(var commit: Pgit_commit; repo: Pgit_repository): Integer cdecl;
-begin
-   // return git_object_new((git_object **)commit, repo, GIT_OBJ_COMMIT);
-   Result := git_object_new(Pgit_object(commit), repo, GIT_OBJ_COMMIT);
 end;
 
 function git_tag_lookup(var tag: Pgit_tag; repo: Pgit_repository; const id: Pgit_oid): Integer cdecl;
@@ -990,22 +970,10 @@ begin
    Result := git_object_lookup(Pgit_object(tag), repo, id, GIT_OBJ_TAG);
 end;
 
-function git_tag_new(var tag: Pgit_tag; repo: Pgit_repository): Integer cdecl;
-begin
-   // return git_object_new((git_object **)tag, repo, GIT_OBJ_TAG);
-   Result := git_object_new(Pgit_object(tag), repo, GIT_OBJ_TAG);
-end;
-
 function git_tree_lookup(var tree: Pgit_tree; repo: Pgit_repository; const id: Pgit_oid): Integer cdecl;
 begin
    // return git_object_lookup((git_object **)tree, repo, id, GIT_OBJ_TREE);
    Result := git_object_lookup(Pgit_object(tree), repo, id, GIT_OBJ_TREE);
-end;
-
-function git_tree_new(var tree: Pgit_tree; repo: Pgit_repository): Integer cdecl;
-begin
-   // return git_object_new((git_object **)tree, repo, GIT_OBJ_TREE);
-   Result := git_object_new(Pgit_object(tree), repo, GIT_OBJ_TREE);
 end;
 
 function time_t__to__TDateTime(t: time_t; const aAdjustMinutes: Integer = 0): TDateTime;
@@ -1049,14 +1017,11 @@ begin
     if libgit2 > 0 then
     begin
       git_object__size                          := Bind('git_object__size');
-      gitfo_prettify_dir_path                   := Bind('gitfo_prettify_dir_path');
-      gitfo_prettify_file_path                  := Bind('gitfo_prettify_file_path');
 
-      git_blob_set_rawcontent_fromfile          := Bind('git_blob_set_rawcontent_fromfile');
-      git_blob_set_rawcontent                   := Bind('git_blob_set_rawcontent');
       git_blob_rawcontent                       := Bind('git_blob_rawcontent');
       git_blob_rawsize                          := Bind('git_blob_rawsize');
-      git_blob_writefile                        := Bind('git_blob_writefile');
+      git_blob_create_fromfile                  := Bind('git_blob_create_fromfile');
+      git_blob_create_frombuffer                := Bind('git_blob_create_frombuffer');
 
       git_commit_message_short                  := Bind('git_commit_message_short');
       git_commit_message                        := Bind('git_commit_message');
@@ -1068,11 +1033,8 @@ begin
       git_commit_id                             := Bind('git_commit_id');
       git_commit_time_offset                    := Bind('git_commit_time_offset');
       git_commit_tree                           := Bind('git_commit_tree');
-      git_commit_add_parent                     := Bind('git_commit_add_parent');
-      git_commit_set_message                    := Bind('git_commit_set_message');
-      git_commit_set_committer                  := Bind('git_commit_set_committer');
-      git_commit_set_author                     := Bind('git_commit_set_author');
-      git_commit_set_tree                       := Bind('git_commit_set_tree');
+      git_commit_create                         := Bind('git_commit_create');
+      git_commit_create_o                       := Bind('git_commit_create_o');
 
       git_index_open_bare                       := Bind('git_index_open_bare');
       git_index_read                            := Bind('git_index_read');
@@ -1089,7 +1051,6 @@ begin
       git_index_get                             := Bind('git_index_get');
 
       git_object_id                             := Bind('git_object_id');
-      git_object_write                          := Bind('git_object_write');
       git_object_close                          := Bind('git_object_close');
       git_object_type                           := Bind('git_object_type');
       git_object_owner                          := Bind('git_object_owner');
@@ -1097,23 +1058,22 @@ begin
       git_object_string2type                    := Bind('git_object_string2type');
       git_object_typeisloose                    := Bind('git_object_typeisloose');
       git_object_lookup                         := Bind('git_object_lookup');
-      git_object_new                            := Bind('git_object_new');
 
       git_odb_new                               := Bind('git_odb_new');
       git_odb_open                              := Bind('git_odb_open');
+      git_odb_open_wstream                      := Bind('git_odb_open_wstream');
+      git_odb_open_rstream                      := Bind('git_odb_open_rstream');
       git_odb_add_backend                       := Bind('git_odb_add_backend');
       git_odb_add_alternate                     := Bind('git_odb_add_alternate');
       git_odb_close                             := Bind('git_odb_close');
       git_odb_read                              := Bind('git_odb_read');
       git_odb_read_header                       := Bind('git_odb_read_header');
-      git_odb_write                             := Bind('git_odb_write');
       git_odb_exists                            := Bind('git_odb_exists');
 
       git_odb_backend_pack                      := Bind('git_odb_backend_pack');
       git_odb_backend_loose                     := Bind('git_odb_backend_loose');
 
-      git_rawobj_hash                           := Bind('git_rawobj_hash');
-      git_rawobj_close                          := Bind('git_rawobj_close');
+      git_odb_object_close                      := Bind('git_odb_object_close');
 
       git_oid_mkstr                             := Bind('git_oid_mkstr');
       git_oid_fmt                               := Bind('git_oid_fmt');
@@ -1139,10 +1099,10 @@ begin
       git_reference_delete                      := Bind('git_reference_delete');
       git_reference_packall                     := Bind('git_reference_packall');
       git_reference_listall                     := Bind('git_reference_listall');
+      git_strarray_free                         := Bind('git_strarray_free');
 
       git_repository_open                       := Bind('git_repository_open');
       git_repository_free                       := Bind('git_repository_free');
-//      git_repository_close                      := Bind('git_repository_close');
       git_repository_open2                      := Bind('git_repository_open2');
       git_repository_open3                      := Bind('git_repository_open3');
       git_repository_database                   := Bind('git_repository_database');
@@ -1164,32 +1124,22 @@ begin
 
       git_tag_name                              := Bind('git_tag_name');
       git_tag_type                              := Bind('git_tag_type');
-      git_tag_target_oid                        := Bind('git_tag_target_oid');
       git_tag_target                            := Bind('git_tag_target');
       git_tag_id                                := Bind('git_tag_id');
-      git_tag_set_name                          := Bind('git_tag_set_name');
       git_tag_tagger                            := Bind('git_tag_tagger');
       git_tag_message                           := Bind('git_tag_message');
-      git_tag_set_target                        := Bind('git_tag_set_target');
-      git_tag_set_tagger                        := Bind('git_tag_set_tagger');
-      git_tag_set_message                       := Bind('git_tag_set_message');
+      git_tag_create                            := Bind('git_tag_create');
+      git_tag_create_o                          := Bind('git_tag_create_o');
 
       git_tree_entry_byname                     := Bind('git_tree_entry_byname');
       git_tree_entry_byindex                    := Bind('git_tree_entry_byindex');
       git_tree_entrycount                       := Bind('git_tree_entrycount');
       git_tree_entry_name                       := Bind('git_tree_entry_name');
       git_tree_entry_2object                    := Bind('git_tree_entry_2object');
-      git_tree_add_entry                        := Bind('git_tree_add_entry');
-      git_tree_remove_entry_byindex             := Bind('git_tree_remove_entry_byindex');
-      git_tree_remove_entry_byname              := Bind('git_tree_remove_entry_byname');
       git_tree_id                               := Bind('git_tree_id');
 
       git_tree_entry_attributes                 := Bind('git_tree_entry_attributes');
       git_tree_entry_id                         := Bind('git_tree_entry_id');
-      git_tree_entry_set_id                     := Bind('git_tree_entry_set_id');
-      git_tree_entry_set_name                   := Bind('git_tree_entry_set_name');
-      git_tree_entry_set_attributes             := Bind('git_tree_entry_set_attributes');
-      git_tree_clear_entries                    := Bind('git_tree_clear_entries');
 
       _git_odb_backend_sqlite                   := Bind('git_odb_backend_sqlite', OPTIONAL);
     end;
@@ -1206,14 +1156,11 @@ begin
     libgit2 := 0;
 
     git_object__size                          := nil;
-    gitfo_prettify_dir_path                   := nil;
-    gitfo_prettify_file_path                  := nil;
 
-    git_blob_set_rawcontent_fromfile          := nil;
-    git_blob_set_rawcontent                   := nil;
     git_blob_rawcontent                       := nil;
     git_blob_rawsize                          := nil;
-    git_blob_writefile                        := nil;
+    git_blob_create_fromfile                  := nil;
+    git_blob_create_frombuffer                := nil;
 
     git_commit_message_short                  := nil;
     git_commit_message                        := nil;
@@ -1225,11 +1172,8 @@ begin
     git_commit_id                             := nil;
     git_commit_time_offset                    := nil;
     git_commit_tree                           := nil;
-    git_commit_add_parent                     := nil;
-    git_commit_set_message                    := nil;
-    git_commit_set_committer                  := nil;
-    git_commit_set_author                     := nil;
-    git_commit_set_tree                       := nil;
+    git_commit_create                         := nil;
+    git_commit_create_o                       := nil;
 
     git_index_open_bare                       := nil;
     git_index_read                            := nil;
@@ -1246,7 +1190,6 @@ begin
     git_index_get                             := nil;
 
     git_object_id                             := nil;
-    git_object_write                          := nil;
     git_object_close                          := nil;
     git_object_type                           := nil;
     git_object_owner                          := nil;
@@ -1254,23 +1197,22 @@ begin
     git_object_string2type                    := nil;
     git_object_typeisloose                    := nil;
     git_object_lookup                         := nil;
-    git_object_new                            := nil;
 
     git_odb_new                               := nil;
     git_odb_open                              := nil;
+    git_odb_open_wstream                      := nil;
+    git_odb_open_rstream                      := nil;
     git_odb_add_backend                       := nil;
     git_odb_add_alternate                     := nil;
     git_odb_close                             := nil;
     git_odb_read                              := nil;
     git_odb_read_header                       := nil;
-    git_odb_write                             := nil;
     git_odb_exists                            := nil;
 
     git_odb_backend_pack                      := nil;
     git_odb_backend_loose                     := nil;
 
-    git_rawobj_hash                           := nil;
-    git_rawobj_close                          := nil;
+    git_odb_object_close                      := nil;
 
     git_oid_mkstr                             := nil;
     git_oid_fmt                               := nil;
@@ -1296,10 +1238,10 @@ begin
     git_reference_delete                      := nil;
     git_reference_packall                     := nil;
     git_reference_listall                     := nil;
+    git_strarray_free                         := nil;
 
     git_repository_open                       := nil;
     git_repository_free                       := nil;
-//    git_repository_close                      := nil;
     git_repository_open2                      := nil;
     git_repository_open3                      := nil;
     git_repository_database                   := nil;
@@ -1321,32 +1263,22 @@ begin
 
     git_tag_name                              := nil;
     git_tag_type                              := nil;
-    git_tag_target_oid                        := nil;
     git_tag_target                            := nil;
     git_tag_id                                := nil;
-    git_tag_set_name                          := nil;
     git_tag_tagger                            := nil;
     git_tag_message                           := nil;
-    git_tag_set_target                        := nil;
-    git_tag_set_tagger                        := nil;
-    git_tag_set_message                       := nil;
+    git_tag_create                            := nil;
+    git_tag_create_o                          := nil;
 
     git_tree_entry_byname                     := nil;
     git_tree_entry_byindex                    := nil;
     git_tree_entrycount                       := nil;
     git_tree_entry_name                       := nil;
     git_tree_entry_2object                    := nil;
-    git_tree_add_entry                        := nil;
-    git_tree_remove_entry_byindex             := nil;
-    git_tree_remove_entry_byname              := nil;
     git_tree_id                               := nil;
 
     git_tree_entry_attributes                 := nil;
     git_tree_entry_id                         := nil;
-    git_tree_entry_set_id                     := nil;
-    git_tree_entry_set_name                   := nil;
-    git_tree_entry_set_attributes             := nil;
-    git_tree_clear_entries                    := nil;
 
     _git_odb_backend_sqlite                   := nil;
   end;

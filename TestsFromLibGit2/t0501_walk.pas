@@ -71,7 +71,7 @@ const
    end;
 
 
-   function test_walk(walk: Pgit_revwalk;
+   function test_walk(walk: Pgit_revwalk; root: Pgit_oid;
          flags: Integer; const possible_results: array of TArray6; results_count: Integer): Integer;
    var
       oid: git_oid;
@@ -81,6 +81,7 @@ const
    begin
       git_revwalk_reset(walk);
       git_revwalk_sorting(walk, flags);
+      git_revwalk_push(walk, root);
 
       for i := 0 to commit_count - 1 do
          result_array[i] := -1;
@@ -90,14 +91,8 @@ const
       while (ret = GIT_SUCCESS) do
       begin
          result_array[i] := get_commit_index(@oid);
-         (*{
-            char str[41];
-            git_oid_fmt(str, &oid);
-            str[40] = 0;
-            printf("  %d) %s\n", i, str);
-         }*)
-         Inc(i);
          ret := git_revwalk_next(@oid, walk);
+         Inc(i);
       end;
 
       for i := 0 to results_count - 1 do
@@ -117,8 +112,6 @@ var
    repo: Pgit_repository;
    walk: Pgit_revwalk;
 begin
-   repo := nil;
-
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
    must_pass(git_revwalk_new(walk, repo));
@@ -126,13 +119,10 @@ begin
    git_oid_mkstr(@id, commit_head);
    git_revwalk_push(walk, @id);
 
-   must_pass(test_walk(walk, GIT_SORT_TIME, commit_sorting_time, 1));
-
-   must_pass(test_walk(walk, GIT_SORT_TOPOLOGICAL, commit_sorting_topo, 2));
-
-   must_pass(test_walk(walk, GIT_SORT_TIME or GIT_SORT_REVERSE, commit_sorting_time_reverse, 1));
-
-   must_pass(test_walk(walk, GIT_SORT_TOPOLOGICAL or GIT_SORT_REVERSE, commit_sorting_topo_reverse, 2));
+   must_pass(test_walk(walk, @id, GIT_SORT_TIME, commit_sorting_time, 1));
+   must_pass(test_walk(walk, @id, GIT_SORT_TOPOLOGICAL, commit_sorting_topo, 2));
+   must_pass(test_walk(walk, @id, GIT_SORT_TIME or GIT_SORT_REVERSE, commit_sorting_time_reverse, 1));
+   must_pass(test_walk(walk, @id, GIT_SORT_TOPOLOGICAL or GIT_SORT_REVERSE, commit_sorting_topo_reverse, 2));
 
    git_revwalk_free(walk);
    git_repository_free(repo);

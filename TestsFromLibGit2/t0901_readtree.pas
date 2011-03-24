@@ -60,7 +60,7 @@ begin
 
    must_be_true(StrComp(git_tree_entry_name(entry), 'README') = 0);
 
-   must_pass(git_tree_entry_2object(obj, entry));
+   must_pass(git_tree_entry_2object(obj, repo, entry));
 
    git_repository_free(repo);
 end;

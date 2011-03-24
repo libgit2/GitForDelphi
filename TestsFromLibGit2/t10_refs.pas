@@ -629,10 +629,13 @@ var
 begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
    must_pass(git_reference_listall(@ref_list, repo, GIT_REF_LISTALL));
-   must_be_true(ref_list.count = 8); //* 8 refs in total if we include the packed ones */
 
-   // TODO : git_strarray_free not exposed, no way to free memory
-//   git_strarray_free(ref_list);
+   (* We have exactly 7 refs in total if we include the packed ones:
+    * there is a reference that exists both in the packfile and as
+    * loose, but we only list it once *)
+   must_be_true(ref_list.count = 7);
+
+   git_strarray_free(@ref_list);
    git_repository_free(repo);
 end;
 
