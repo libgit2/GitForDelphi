@@ -11,6 +11,8 @@ type
    strict private
       function GitReturnValue(aResult: Integer): String;
    public
+      class function NamedSuite(const aName: String): ITestSuite;
+
       procedure must_pass(aResult: Integer);
       procedure must_fail(aResult: Integer; aExpectedResult: Integer = 0);
       procedure must_be_true(b: Boolean; const msg: String = '');
@@ -21,6 +23,11 @@ type
       function rmdir_recurs(const dir: string): Boolean;
       function open_temp_repo(var repo: Pgit_repository; const path: PAnsiChar): Integer;
       procedure close_temp_repo(repo: Pgit_repository);
+   end;
+
+   TTestSuiteForLibGit2 = class(TTestSuite, ITestSuite, ITest)
+   public
+      constructor Create(TestClass: TTestCaseClass; const aName: String);
    end;
 
 const
@@ -273,6 +280,19 @@ begin
    path     := StringReplace(String(AnsiString(TEMP_REPO_FOLDER)), '/', PathDelim, [rfReplaceAll]);
 
    rmdir_recurs(path);
+end;
+
+{ TTestSuiteForLibGit2 }
+
+class function TTestFromLibGit2.NamedSuite(const aName: String): ITestSuite;
+begin
+  Result := TTestSuiteForLibGit2.Create(Self, aName);
+end;
+
+constructor TTestSuiteForLibGit2.Create(TestClass: TTestCaseClass; const aName: String);
+begin
+  inherited Create(aName);
+  AddTests(testClass);
 end;
 
 initialization

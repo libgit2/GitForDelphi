@@ -8,47 +8,48 @@ uses
 
 type
    Test10_refs_readtag = class(TTestFromLibGit2)
-      procedure loose_tag_reference_looking_up;
-      procedure non_existing_tag_reference_looking_up;
+      procedure lookup_a_loose_tag_reference;
+      procedure lookup_a_loose_tag_reference_that_doesn_t_exist;
    end;
 
    Test10_refs_readsymref = class(TTestFromLibGit2)
-      procedure symbolic_reference_looking_up;
-      procedure nested_symbolic_reference_looking_up;
-      procedure looking_up_head_then_master;
-      procedure looking_up_master_then_head;
+      procedure lookup_a_symbolic_reference;
+      procedure lookup_a_nested_symbolic_reference;
+      procedure lookup_the_HEAD_and_resolve_the_master_branch;
+      procedure lookup_the_master_branch_and_then_the_HEAD;
    end;
 
    Test10_refs_readpackedref = class(TTestFromLibGit2)
-      procedure packed_reference_looking_up;
-      procedure packed_exists_but_more_recent_loose_reference_is_retrieved;
+      procedure lookup_a_packed_reference;
+      procedure assure_that_a_loose_reference_is_looked_up_before_a_packed_reference;
    end;
 
    Test10_refs_createref = class(TTestFromLibGit2)
-      procedure create_new_symbolic_ref;
-      procedure create_new_deep_symbolic_ref;
-      procedure create_new_object_id_ref;
+      procedure create_a_new_symbolic_reference;
+      procedure create_a_deep_symbolic_reference;
+      procedure create_a_new_OID_reference;
    end;
 
    Test10_refs_packfile = class(TTestFromLibGit2)
-      procedure create_packfile_for_empty_folder;
-      procedure create_packfile_from_all_loose;
+      procedure create_a_packfile_for_an_empty_folder;
+      procedure create_a_packfile_from_all_the_loose_rn_a_repo;
    end;
 
    Test10_refs_rename = class(TTestFromLibGit2)
-      procedure rename_loose_reference;
-      procedure rename_packed_reference__should_make_it_loose;
-      procedure rename_packed_reference_does_not_pack_reference_which_is_both_loose_and_packed;
-      procedure cannot_rename_reference_to_existing_reference;
-      procedure cannot_rename_reference_to_invalid_name;
+      procedure rename_a_loose_reference;
+      procedure rename_packed_reference__should_make_it_loose_;
+      procedure renaming_a_packed_reference_does_not_pack_another_reference_which_happens_to_be_in_both_loose_and_pack_state;
+      procedure can_not_rename_a_reference_with_the_name_of_an_existing_reference;
+      procedure can_not_rename_a_reference_with_an_invalid_name;
    end;
 
    Test10_refs_delete = class(TTestFromLibGit2)
-      procedure delete_reference_deletes_both_packed_and_loose;
+      procedure deleting_a_ref_which_is_both_packed_and_loose_should_remove_both_tracks_in_the_filesystem;
    end;
 
    Test10_refs_list = class(TTestFromLibGit2)
-      procedure list_all_the_references_in_our_test_repo;
+      procedure try_to_list_all_the_references_in_our_test_repo;
+      procedure try_to_list_only_the_symbolic_references;
    end;
 
 implementation
@@ -58,7 +59,7 @@ const
 
 { Test10_refs_readtag }
 
-procedure Test10_refs_readtag.loose_tag_reference_looking_up;
+procedure Test10_refs_readtag.lookup_a_loose_tag_reference;
 var
    repo: Pgit_repository;
    reference: Pgit_reference;
@@ -78,7 +79,7 @@ begin
    git_repository_free(repo);
 end;
 
-procedure Test10_refs_readtag.non_existing_tag_reference_looking_up;
+procedure Test10_refs_readtag.lookup_a_loose_tag_reference_that_doesn_t_exist;
 const
    non_existing_tag_ref_name: PAnsiChar = 'refs/tags/i-do-not-exist';
 var
@@ -98,7 +99,7 @@ const
    current_head_target:       PAnsiChar = 'refs/heads/master';
    current_master_tip:        PAnsiChar = 'be3563ae3f795b2b4353bcce3a527ad0a4f7f644';
 
-procedure Test10_refs_readsymref.symbolic_reference_looking_up;
+procedure Test10_refs_readsymref.lookup_a_symbolic_reference;
 var
    repo: Pgit_repository;
    reference, resolved_ref: Pgit_reference;
@@ -125,7 +126,7 @@ begin
    git_repository_free(repo);
 end;
 
-procedure Test10_refs_readsymref.nested_symbolic_reference_looking_up;
+procedure Test10_refs_readsymref.lookup_a_nested_symbolic_reference;
 var
    repo: Pgit_repository;
    reference, resolved_ref: Pgit_reference;
@@ -152,7 +153,7 @@ begin
    git_repository_free(repo);
 end;
 
-procedure Test10_refs_readsymref.looking_up_head_then_master;
+procedure Test10_refs_readsymref.lookup_the_HEAD_and_resolve_the_master_branch;
 var
    repo: Pgit_repository;
    reference, resolved_ref, comp_base_ref: Pgit_reference;
@@ -174,7 +175,7 @@ begin
    git_repository_free(repo);
 end;
 
-procedure Test10_refs_readsymref.looking_up_master_then_head;
+procedure Test10_refs_readsymref.lookup_the_master_branch_and_then_the_HEAD;
 var
    repo: Pgit_repository;
    reference, master_ref, resolved_ref: Pgit_reference;
@@ -196,7 +197,7 @@ const
    packed_head_name:       PAnsiChar = 'refs/heads/packed';
    packed_test_head_name:  PAnsiChar = 'refs/heads/packed-test';
 
-procedure Test10_refs_readpackedref.packed_reference_looking_up;
+procedure Test10_refs_readpackedref.lookup_a_packed_reference;
 var
    repo: Pgit_repository;
    reference: Pgit_reference;
@@ -216,7 +217,7 @@ begin
    git_repository_free(repo);
 end;
 
-procedure Test10_refs_readpackedref.packed_exists_but_more_recent_loose_reference_is_retrieved;
+procedure Test10_refs_readpackedref.assure_that_a_loose_reference_is_looked_up_before_a_packed_reference;
 var
    repo: Pgit_repository;
    reference: Pgit_reference;
@@ -233,7 +234,7 @@ end;
 
 { Test10_refs_createref }
 
-procedure Test10_refs_createref.create_new_symbolic_ref;
+procedure Test10_refs_createref.create_a_new_symbolic_reference;
 var
    new_reference, looked_up_ref, resolved_ref: Pgit_reference;
    repo: Pgit_repository;
@@ -280,7 +281,7 @@ begin
    SysUtils.DeleteFile(ref_path); //* TODO_: replace with git_reference_delete() when available */
 end;
 
-procedure Test10_refs_createref.create_new_deep_symbolic_ref;
+procedure Test10_refs_createref.create_a_deep_symbolic_reference;
 var
    new_reference, looked_up_ref, resolved_ref: Pgit_reference;
    repo: Pgit_repository;
@@ -307,7 +308,7 @@ begin
    rmdir_recurs(ref_path);
 end;
 
-procedure Test10_refs_createref.create_new_object_id_ref;
+procedure Test10_refs_createref.create_a_new_OID_reference;
 var
    new_reference, looked_up_ref: Pgit_reference;
    repo: Pgit_repository;
@@ -348,7 +349,7 @@ begin
    SysUtils.DeleteFile(ref_path); // TODO_: replace with git_reference_delete() when available */
 end;
 
-procedure Test10_refs_packfile.create_packfile_for_empty_folder;
+procedure Test10_refs_packfile.create_a_packfile_for_an_empty_folder;
 var
    repo: Pgit_repository;
    temp_path: String;
@@ -370,7 +371,7 @@ begin
    close_temp_repo(repo);
 end;
 
-procedure Test10_refs_packfile.create_packfile_from_all_loose;
+procedure Test10_refs_packfile.create_a_packfile_from_all_the_loose_rn_a_repo;
 const
    loose_tag_ref_name: PAnsiChar = 'refs/tags/test';
    non_existing_tag_ref_name: PAnsiChar = 'refs/tags/i-do-not-exist';
@@ -408,7 +409,7 @@ begin
    close_temp_repo(repo);
 end;
 
-procedure Test10_refs_rename.rename_loose_reference;
+procedure Test10_refs_rename.rename_a_loose_reference;
 var
    looked_up_ref, another_looked_up_ref: Pgit_reference;
    repo: Pgit_repository;
@@ -454,7 +455,7 @@ begin
    close_temp_repo(repo);
 end;
 
-procedure Test10_refs_rename.rename_packed_reference__should_make_it_loose;
+procedure Test10_refs_rename.rename_packed_reference__should_make_it_loose_;
 var
    looked_up_ref, another_looked_up_ref: Pgit_reference;
    repo: Pgit_repository;
@@ -500,7 +501,7 @@ begin
    close_temp_repo(repo);
 end;
 
-procedure Test10_refs_rename.rename_packed_reference_does_not_pack_reference_which_is_both_loose_and_packed;
+procedure Test10_refs_rename.renaming_a_packed_reference_does_not_pack_another_reference_which_happens_to_be_in_both_loose_and_pack_state;
 var
    looked_up_ref, another_looked_up_ref: Pgit_reference;
    repo: Pgit_repository;
@@ -543,7 +544,7 @@ begin
    close_temp_repo(repo);
 end;
 
-procedure Test10_refs_rename.cannot_rename_reference_to_existing_reference;
+procedure Test10_refs_rename.can_not_rename_a_reference_with_the_name_of_an_existing_reference;
 var
    looked_up_ref: Pgit_reference;
    repo: Pgit_repository;
@@ -563,7 +564,7 @@ begin
    close_temp_repo(repo);
 end;
 
-procedure Test10_refs_rename.cannot_rename_reference_to_invalid_name;
+procedure Test10_refs_rename.can_not_rename_a_reference_with_an_invalid_name;
 var
    looked_up_ref: Pgit_reference;
    repo: Pgit_repository;
@@ -588,7 +589,7 @@ end;
 
 { Test10_refs_delete }
 
-procedure Test10_refs_delete.delete_reference_deletes_both_packed_and_loose;
+procedure Test10_refs_delete.deleting_a_ref_which_is_both_packed_and_loose_should_remove_both_tracks_in_the_filesystem;
 var
    looked_up_ref, another_looked_up_ref: Pgit_reference;
    repo: Pgit_repository;
@@ -622,7 +623,7 @@ end;
 
 { Test10_refs_list }
 
-procedure Test10_refs_list.list_all_the_references_in_our_test_repo;
+procedure Test10_refs_list.try_to_list_all_the_references_in_our_test_repo;
 var
    repo: Pgit_repository;
    ref_list: git_strarray;
@@ -639,15 +640,28 @@ begin
    git_repository_free(repo);
 end;
 
+procedure Test10_refs_list.try_to_list_only_the_symbolic_references;
+var
+   repo: Pgit_repository;
+   ref_list: git_strarray;
+begin
+   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
+   must_pass(git_reference_listall(@ref_list, repo, GIT_REF_SYMBOLIC));
+   must_be_true(ref_list.count = 0); //* no symrefs in the test repo */
+
+   git_strarray_free(@ref_list);
+   git_repository_free(repo);
+end;
+
 initialization
-   RegisterTest('From libgit2.t10-refs', Test10_refs_readtag.Suite);
-   RegisterTest('From libgit2.t10-refs', Test10_refs_readsymref.Suite);
-   RegisterTest('From libgit2.t10-refs', Test10_refs_readpackedref.Suite);
-   RegisterTest('From libgit2.t10-refs', Test10_refs_createref.Suite);
-   RegisterTest('From libgit2.t10-refs', Test10_refs_packfile.Suite);
-   RegisterTest('From libgit2.t10-refs', Test10_refs_rename.Suite);
-   RegisterTest('From libgit2.t10-refs', Test10_refs_delete.Suite);
-   RegisterTest('From libgit2.t10-refs', Test10_refs_list.Suite);
+   RegisterTest('From libgit2.t10-refs', Test10_refs_readtag.NamedSuite('readtag'));
+   RegisterTest('From libgit2.t10-refs', Test10_refs_readsymref.NamedSuite('readsym'));
+   RegisterTest('From libgit2.t10-refs', Test10_refs_readpackedref.NamedSuite('readpacked'));
+   RegisterTest('From libgit2.t10-refs', Test10_refs_createref.NamedSuite('create'));
+   RegisterTest('From libgit2.t10-refs', Test10_refs_packfile.NamedSuite('pack'));
+   RegisterTest('From libgit2.t10-refs', Test10_refs_rename.NamedSuite('rename'));
+   RegisterTest('From libgit2.t10-refs', Test10_refs_delete.NamedSuite('delete'));
+   RegisterTest('From libgit2.t10-refs', Test10_refs_list.NamedSuite('list'));
 
 end.
 

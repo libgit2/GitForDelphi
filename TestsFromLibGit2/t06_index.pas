@@ -8,22 +8,25 @@ uses
 
 type
    Test06_index_read = class(TTestFromLibGit2)
-      procedure index_loadempty_test_0601;
-      procedure index_load_test_0601;
-      procedure index2_load_test_0601;
-      procedure index_find_test_0601;
-      procedure index_findempty_test_0601;
+      procedure load_an_empty_index;
+      procedure load_a_standard_index__default_test_index_;
+      procedure load_a_standard_index__git_git_index_;
+   end;
+
+   Test06_index_find = class(TTestFromLibGit2)
+      procedure find_an_entry_on_an_index;
+      procedure find_an_entry_in_an_empty_index;
    end;
 
    Test06_index_write = class(TTestFromLibGit2)
-      procedure index_write_test;
+      procedure write_an_index_back_to_disk;
    end;
 
 implementation
 
-{ Test0601_read }
+{ Test06_index_read }
 
-procedure Test06_index_read.index_loadempty_test_0601;
+procedure Test06_index_read.load_an_empty_index;
 var
    index: Pgit_index;
 begin
@@ -39,17 +42,14 @@ begin
    git_index_free(index);
 end;
 
-procedure Test06_index_read.index_load_test_0601;
+procedure Test06_index_read.load_a_standard_index__default_test_index_;
 var
-   path: AnsiString;
    index: Pgit_index;
    i, offset: Integer;
    entries: PPgit_index_entry;
    e: Pgit_index_entry;
 begin
-   path := AnsiString(StringReplace(ExtractFilePath(ParamStr(0)) + TEST_INDEX_PATH, '/', '\', [rfReplaceAll]));
-
-   must_pass(git_index_open_bare(index, PAnsiChar(path)));
+   must_pass(git_index_open_bare(index, TEST_INDEX_PATH));
 
    CheckTrue(index.on_disk = 1);
 
@@ -74,7 +74,7 @@ begin
    git_index_free(index);
 end;
 
-procedure Test06_index_read.index2_load_test_0601;
+procedure Test06_index_read.load_a_standard_index__git_git_index_;
 var
    index: Pgit_index;
 begin
@@ -91,7 +91,9 @@ begin
    git_index_free(index);
 end;
 
-procedure Test06_index_read.index_find_test_0601;
+{ Test06_index_find }
+
+procedure Test06_index_find.find_an_entry_on_an_index;
 var
    index: Pgit_index;
    i, idx: Integer;
@@ -108,7 +110,7 @@ begin
    git_index_free(index);
 end;
 
-procedure Test06_index_read.index_findempty_test_0601;
+procedure Test06_index_find.find_an_entry_in_an_empty_index;
 var
    index: Pgit_index;
    i, idx: Integer;
@@ -124,7 +126,9 @@ begin
    git_index_free(index);
 end;
 
-procedure Test06_index_write.index_write_test;
+{ Test06_index_write }
+
+procedure Test06_index_write.write_an_index_back_to_disk;
 var
    index: Pgit_index;
 begin
@@ -143,7 +147,8 @@ begin
 end;
 
 initialization
-   RegisterTest('From libgit2.t06-index', Test06_index_read.Suite);
-   RegisterTest('From libgit2.t06-index', Test06_index_write.Suite);
+   RegisterTest('From libgit2.t06-index', Test06_index_read.NamedSuite('read'));
+   RegisterTest('From libgit2.t06-index', Test06_index_find.NamedSuite('find'));
+   RegisterTest('From libgit2.t06-index', Test06_index_write.NamedSuite('write'));
 
 end.

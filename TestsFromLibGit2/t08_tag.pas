@@ -1,4 +1,4 @@
-unit t0802_write;
+unit t08_tag;
 
 interface
 
@@ -7,15 +7,52 @@ uses
    uTestsFromLibGit2, uGitForDelphi;
 
 type
-   Test0802_write = class(TTestFromLibGit2)
-      procedure tag_writeback_test_0802;
+   Test08_tag_read = class(TTestFromLibGit2)
+      procedure read_and_parse_a_tag_from_the_repository;
+   end;
+
+   Test08_tag_write = class(TTestFromLibGit2)
+      procedure write_a_tag_to_the_repository_and_read_it_again;
    end;
 
 implementation
 
-{ Test0802_write }
+{ Test08_tag_read }
 
-procedure Test0802_write.tag_writeback_test_0802;
+procedure Test08_tag_read.read_and_parse_a_tag_from_the_repository;
+var
+   repo: Pgit_repository;
+   tag1, tag2: Pgit_tag;
+   commit: Pgit_commit;
+   id1, id2, id_commit: git_oid;
+begin
+   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
+
+   git_oid_mkstr(@id1, tag1_id);
+   git_oid_mkstr(@id2, tag2_id);
+   git_oid_mkstr(@id_commit, tagged_commit);
+
+   must_pass(git_tag_lookup(tag1, repo, @id1));
+
+   CheckTrue(StrComp(git_tag_name(tag1), 'test') = 0);
+   CheckTrue(git_tag_type(tag1) = GIT_OBJ_TAG);
+
+   must_pass(git_tag_target(Pgit_object(tag2), tag1));
+   CheckTrue(tag2 <> nil);
+
+   CheckTrue(git_oid_cmp(@id2, git_tag_id(tag2)) = 0);
+
+   must_pass(git_tag_target(Pgit_object(commit), tag2));
+   CheckTrue(commit <> nil);
+
+   CheckTrue(git_oid_cmp(@id_commit, git_commit_id(commit)) = 0);
+
+   git_repository_free(repo);
+end;
+
+{ Test08_tag_write }
+
+procedure Test08_tag_write.write_a_tag_to_the_repository_and_read_it_again;
 const
    TAGGER_NAME:      PAnsiChar = 'Vicent Marti';
    TAGGER_EMAIL:     PAnsiChar = 'vicent@github.com';
@@ -72,6 +109,7 @@ begin
 end;
 
 initialization
-   RegisterTest('From libgit2', Test0802_write.Suite);
+   RegisterTest('From libgit2.t08-tag', Test08_tag_read.NamedSuite('read'));
+   RegisterTest('From libgit2.t08-tag', Test08_tag_write.NamedSuite('write'));
 
 end.

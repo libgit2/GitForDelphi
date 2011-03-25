@@ -22,13 +22,11 @@ uses
   uTestsFromLibGit2 in 'TestsFromLibGit2\uTestsFromLibGit2.pas',
   uGitForDelphi in 'uGitForDelphi.pas',
   uTestGitRecords in 'uTestGitRecords.pas',
-  t0402_details in 'TestsFromLibGit2\t0402_details.pas',
-  t0501_walk in 'TestsFromLibGit2\t0501_walk.pas',
+  t04_commit in 'TestsFromLibGit2\t04_commit.pas',
+  t05_revwalk in 'TestsFromLibGit2\t05_revwalk.pas',
   t06_index in 'TestsFromLibGit2\t06_index.pas',
-  t0801_readtag in 'TestsFromLibGit2\t0801_readtag.pas',
-  t0802_write in 'TestsFromLibGit2\t0802_write.pas',
-  t0901_readtree in 'TestsFromLibGit2\t0901_readtree.pas',
-  t0902_modify in 'TestsFromLibGit2\t0902_modify.pas',
+  t08_tag in 'TestsFromLibGit2\t08_tag.pas',
+  t09_tree in 'TestsFromLibGit2\t09_tree.pas',
   uTestHelpers in 'uTestHelpers.pas',
   t10_refs in 'TestsFromLibGit2\t10_refs.pas';
 

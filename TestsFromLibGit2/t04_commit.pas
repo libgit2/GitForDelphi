@@ -1,4 +1,4 @@
-unit t0402_details;
+unit t04_commit;
 
 interface
 
@@ -7,15 +7,15 @@ uses
    uTestsFromLibGit2, uGitForDelphi;
 
 type
-   Test0402_details = class(TTestFromLibGit2)
-      procedure query_details_test_0402;
+   Test04_commit_details = class(TTestFromLibGit2)
+      procedure query_the_details_on_a_parsed_commit;
    end;
 
 implementation
 
-{ Test0402_details }
+{ Test04_commit_details }
 
-procedure Test0402_details.query_details_test_0402;
+procedure Test04_commit_details.query_the_details_on_a_parsed_commit;
 const
    commit_ids: array[0..5] of AnsiString = (
       'a4a7dce85cf63874e984719f4fdd239f5145052f', { 0 }
@@ -75,6 +75,6 @@ begin
 end;
 
 initialization
-   RegisterTest('From libgit2', Test0402_details.Suite);
+   RegisterTest('From libgit2.t04-commit', Test04_commit_details.NamedSuite('details'));
 
 end.

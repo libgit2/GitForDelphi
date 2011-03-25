@@ -1,4 +1,4 @@
-unit t0901_readtree;
+unit t09_tree;
 
 interface
 
@@ -7,16 +7,19 @@ uses
    uTestsFromLibGit2, uGitForDelphi;
 
 type
-   Test0901_readtree = class(TTestFromLibGit2)
-      procedure tree_entry_access_test_0901;
-      procedure tree_read_test_0901;
+   Test09_tree_read = class(TTestFromLibGit2)
+      procedure access_randomly_the_entries_on_a_loaded_tree;
+      procedure read_a_tree_from_the_repository;
+   end;
+
+   Test09_tree_write = class(TTestFromLibGit2)
    end;
 
 implementation
 
-{ Test0901_readtree }
+{ Test09_tree_read }
 
-procedure Test0901_readtree.tree_entry_access_test_0901;
+procedure Test09_tree_read.access_randomly_the_entries_on_a_loaded_tree;
 var
    id: git_oid ;
    repo: Pgit_repository;
@@ -39,7 +42,7 @@ begin
    git_repository_free(repo);
 end;
 
-procedure Test0901_readtree.tree_read_test_0901;
+procedure Test09_tree_read.read_a_tree_from_the_repository;
 var
    id: git_oid;
    repo: Pgit_repository;
@@ -66,6 +69,7 @@ begin
 end;
 
 initialization
-   RegisterTest('From libgit2', Test0901_readtree.Suite);
+   RegisterTest('From libgit2.t09-tree', Test09_tree_read.NamedSuite('read'));
+//   RegisterTest('From libgit2.t09-tree', Test09_tree_write.Suite('write')); // TODO THREADSAFE
 
 end.

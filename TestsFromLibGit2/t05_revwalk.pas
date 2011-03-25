@@ -1,4 +1,4 @@
-unit t0501_walk;
+unit t05_revwalk;
 
 interface
 
@@ -7,15 +7,15 @@ uses
    uTestsFromLibGit2, uGitForDelphi;
 
 type
-   Test0501_walk = class(TTestFromLibGit2)
-      procedure simple_walk_test_0501;
+   Test05_revwalk_walk = class(TTestFromLibGit2)
+      procedure do_a_simple_walk_on_a_repo_with_different_sorting_modes;
    end;
 
 implementation
 
-{ Test0501_walk }
+{ Test05_revwalk_walk }
 
-procedure Test0501_walk.simple_walk_test_0501;
+procedure Test05_revwalk_walk.do_a_simple_walk_on_a_repo_with_different_sorting_modes;
 type
    TArray6 = array[0..5] of Integer;
 const
@@ -129,6 +129,6 @@ begin
 end;
 
 initialization
-   RegisterTest('From libgit2', Test0501_walk.Suite);
+   RegisterTest('From libgit2.t05-revwalk', Test05_revwalk_walk.NamedSuite('walk'));
 
 end.
