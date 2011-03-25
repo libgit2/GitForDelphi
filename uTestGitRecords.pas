@@ -43,15 +43,15 @@ procedure TTestGitRecords.Test_git_commit;
      else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
    end;
 begin
-   CheckEquals(112, sizeof(git_commit),             'git_commit');
+   CheckEquals( 88, sizeof(git_commit),             'git_commit');
 
    CheckEquals(  0, offsetof('object_'),           'object_');
-   CheckEquals( 56, offsetof('parent_oids'),       'parent_oids');
-   CheckEquals( 76, offsetof('tree_oid'),          'tree_oid');
-   CheckEquals( 96, offsetof('author'),            'author');
-   CheckEquals(100, offsetof('committer'),         'committer');
-   CheckEquals(104, offsetof('message_'),          'message_');
-   CheckEquals(108, offsetof('message_short'),     'message_short');
+   CheckEquals( 32, offsetof('parent_oids'),       'parent_oids');
+   CheckEquals( 52, offsetof('tree_oid'),          'tree_oid');
+   CheckEquals( 72, offsetof('author'),            'author');
+   CheckEquals( 76, offsetof('committer'),         'committer');
+   CheckEquals( 80, offsetof('message_'),          'message_');
+   CheckEquals( 84, offsetof('message_short'),     'message_short');
 end;
 
 procedure TTestGitRecords.Test_git_index;
@@ -120,19 +120,23 @@ procedure TTestGitRecords.Test_git_odb_backend;
      else if Value = 'read'               then Result := Integer(@item.read) - Integer(@item)
      else if Value = 'read_header'        then Result := Integer(@item.read_header) - Integer(@item)
      else if Value = 'write'              then Result := Integer(@item.write) - Integer(@item)
+     else if Value = 'writestream'        then Result := Integer(@item.writestream) - Integer(@item)
+     else if Value = 'readstream'         then Result := Integer(@item.readstream) - Integer(@item)
      else if Value = 'exists'             then Result := Integer(@item.exists) - Integer(@item)
      else if Value = 'free'               then Result := Integer(@item.free) - Integer(@item)
      else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
    end;
 begin
-   CheckEquals( 24, sizeof(git_odb_backend),       'git_odb_backend size');
+   CheckEquals( 32, sizeof(git_odb_backend),       'git_odb_backend size');
 
    CheckEquals(  0, offsetof('odb'),               'odb');
    CheckEquals(  4, offsetof('read'),              'read');
    CheckEquals(  8, offsetof('read_header'),       'read_header');
    CheckEquals( 12, offsetof('write'),             'write');
-   CheckEquals( 16, offsetof('exists'),            'exists');
-   CheckEquals( 20, offsetof('free'),              'free');
+   CheckEquals( 16, offsetof('writestream'),       'writestream');
+   CheckEquals( 20, offsetof('readstream'),        'readstream');
+   CheckEquals( 24, offsetof('exists'),            'exists');
+   CheckEquals( 28, offsetof('free'),              'free');
 end;
 
 procedure TTestGitRecords.Test_git_reference;
@@ -187,14 +191,14 @@ procedure TTestGitRecords.Test_git_tag;
      else raise Exception.CreateFmt('Unhandled condition (%0:s)', [Value]);
    end;
 begin
-   CheckEquals( 92, sizeof(git_tag),               'git_tag size');
+   CheckEquals( 68, sizeof(git_tag),               'git_tag size');
 
    CheckEquals(  0, offsetof('object_'),           'object_');
-   CheckEquals( 56, offsetof('target'),            'target');
-   CheckEquals( 76, offsetof('type_'),             'type_');
-   CheckEquals( 80, offsetof('tag_name'),          'tag_name');
-   CheckEquals( 84, offsetof('tagger'),            'tagger');
-   CheckEquals( 88, offsetof('message_'),          'message_');
+   CheckEquals( 32, offsetof('target'),            'target');
+   CheckEquals( 52, offsetof('type_'),             'type_');
+   CheckEquals( 56, offsetof('tag_name'),          'tag_name');
+   CheckEquals( 60, offsetof('tagger'),            'tagger');
+   CheckEquals( 64, offsetof('message_'),          'message_');
 end;
 
 procedure TTestGitRecords.Test_git_time;
@@ -251,9 +255,9 @@ begin
    CheckEquals( 48, sizeof(git_index),              'git_index');
    CheckEquals(  8, sizeof(git_hashtable_node),     'git_hashtable_node');
    CheckEquals( 28, sizeof(git_hashtable),          'git_hashtable');
-   CheckEquals( 60, sizeof(git_repository),         'git_repository');
+   CheckEquals( 64, sizeof(git_repository),         'git_repository');
    CheckEquals( 32, sizeof(git_tree_entry),         'git_tree_entry');
-   CheckEquals( 76, sizeof(git_tree),               'git_tree');
+   CheckEquals( 52, sizeof(git_tree),               'git_tree');
    CheckEquals(  8, sizeof(git_refcache),           'git_refcache');
 end;
 
