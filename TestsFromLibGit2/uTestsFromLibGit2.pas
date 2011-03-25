@@ -66,7 +66,7 @@ uses
 
 function REPOSITORY_FOLDER: PAnsiChar;
 begin
-   Result := PAnsiChar(AnsiString(ExtractFilePath(ParamStr(0)) + REPOSITORY_FOLDER_));
+   Result := PAnsiChar(AnsiString(StringReplace(ExtractFilePath(ParamStr(0)), PathDelim, '/', [rfReplaceAll]) + REPOSITORY_FOLDER_));
 end;
 
 function OctalToInt(const Value: string): Longint;
