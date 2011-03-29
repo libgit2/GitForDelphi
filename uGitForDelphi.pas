@@ -1,4 +1,4 @@
-unit uGitForDelphi;
+   unit uGitForDelphi;
 
 interface
 
@@ -729,8 +729,10 @@ var
    // GIT_EXTERN(int) git_commit_create_o(git_oid *oid, git_repository *repo, const char *update_ref, const git_signature *author, const git_signature *committer, const char *message, const git_tree *tree, int parent_count, const git_commit *parents[]);
    git_commit_create_o:                function (oid: Pgit_oid; repo: Pgit_repository; const update_ref: PAnsiChar; const author, committer: Pgit_signature; const message_: PAnsiChar; const tree: Pgit_tree; parent_count: Integer; const parents: PPgit_commit): Integer cdecl;
 
-   // TODO : GIT_EXTERN(int) git_commit_create_v(git_oid *oid, git_repository *repo, const char *update_ref, const git_signature *author, const git_signature *committer, const char *message, const git_oid *tree_oid, int parent_count, ...);
-   // TODO : GIT_EXTERN(int) git_commit_create_ov(git_oid *oid, git_repository *repo, const char *update_ref, const git_signature *author, const git_signature *committer, const char *message, const git_tree *tree, int parent_count, ...);
+   // GIT_EXTERN(int) git_commit_create_v(git_oid *oid, git_repository *repo, const char *update_ref, const git_signature *author, const git_signature *committer, const char *message, const git_oid *tree_oid, int parent_count, ...);
+   git_commit_create_v:                function (oid: Pgit_oid; repo: Pgit_repository; const update_ref: PAnsiChar; const author, committer: Pgit_signature; const message_: PAnsiChar; const tree_oid: Pgit_oid; parent_count: Integer): Integer cdecl varargs;
+   // GIT_EXTERN(int) git_commit_create_ov(git_oid *oid, git_repository *repo, const char *update_ref, const git_signature *author, const git_signature *committer, const char *message, const git_tree *tree, int parent_count, ...);
+   git_commit_create_ov:               function (oid: Pgit_oid; repo: Pgit_repository; const update_ref: PAnsiChar; const author, committer: Pgit_signature; const message_: PAnsiChar; const tree: Pgit_tree; parent_count: Integer): Integer cdecl varargs;
 
    // GIT_EXTERN(int) git_index_open_bare(git_index **index, const char *index_path);
    git_index_open_bare:                function (var index: Pgit_index; const index_path: PAnsiChar): Integer cdecl;
@@ -1052,6 +1054,8 @@ begin
       git_commit_tree                           := Bind('git_commit_tree');
       git_commit_create                         := Bind('git_commit_create');
       git_commit_create_o                       := Bind('git_commit_create_o');
+      git_commit_create_v                       := Bind('git_commit_create_ov');
+      git_commit_create_ov                      := Bind('git_commit_create_ov');
 
       git_index_open_bare                       := Bind('git_index_open_bare');
       git_index_read                            := Bind('git_index_read');
@@ -1200,6 +1204,8 @@ begin
     git_commit_tree                           := nil;
     git_commit_create                         := nil;
     git_commit_create_o                       := nil;
+    git_commit_create_v                       := nil;
+    git_commit_create_ov                      := nil;
 
     git_index_open_bare                       := nil;
     git_index_read                            := nil;
