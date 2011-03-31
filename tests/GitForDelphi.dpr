@@ -20,7 +20,6 @@ uses
   GUITestRunner,
   TextTestRunner,
   uTestsFromLibGit2 in 'TestsFromLibGit2\uTestsFromLibGit2.pas',
-  uGitForDelphi in 'uGitForDelphi.pas',
   uTestGitRecords in 'uTestGitRecords.pas',
   t04_commit in 'TestsFromLibGit2\t04_commit.pas',
   t05_revwalk in 'TestsFromLibGit2\t05_revwalk.pas',
@@ -28,7 +27,8 @@ uses
   t08_tag in 'TestsFromLibGit2\t08_tag.pas',
   t09_tree in 'TestsFromLibGit2\t09_tree.pas',
   uTestHelpers in 'uTestHelpers.pas',
-  t10_refs in 'TestsFromLibGit2\t10_refs.pas';
+  t10_refs in 'TestsFromLibGit2\t10_refs.pas',
+  uGitForDelphi in '..\uGitForDelphi.pas';
 
 {$R *.RES}
 
