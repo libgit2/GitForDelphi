@@ -256,7 +256,6 @@ begin
    CheckEquals(  8, sizeof(git_hashtable_node),     'git_hashtable_node');
    CheckEquals( 28, sizeof(git_hashtable),          'git_hashtable');
    CheckEquals( 64, sizeof(git_repository),         'git_repository');
-   CheckEquals( 32, sizeof(git_tree_entry),         'git_tree_entry');
    CheckEquals( 52, sizeof(git_tree),               'git_tree');
    CheckEquals(  8, sizeof(git_refcache),           'git_refcache');
 end;

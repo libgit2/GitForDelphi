@@ -19,7 +19,7 @@ I intend to make a wrapper class, `TGitRepository` to give a nicer Delphi-like i
 git2-0.dll built from Visual C++ 2010 Express is in the `binary` branch,
 you can use it while in the master branch like this
 
-    git checkout origin/binary -- git2-0.dll; git reset git2-0.dll
+    git checkout origin/binary -- tests/git2-0.dll; git reset tests/git2-0.dll
 
 See `LIBGIT2_sha` file for the libgit2 commit that the dll and code are currently based on.
 

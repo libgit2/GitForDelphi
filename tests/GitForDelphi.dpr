@@ -28,7 +28,8 @@ uses
   t09_tree in 'TestsFromLibGit2\t09_tree.pas',
   uTestHelpers in 'uTestHelpers.pas',
   t10_refs in 'TestsFromLibGit2\t10_refs.pas',
-  uGitForDelphi in '..\uGitForDelphi.pas';
+  uGitForDelphi in '..\uGitForDelphi.pas',
+  t12_repo in 'TestsFromLibGit2\t12_repo.pas';
 
 {$R *.RES}
 

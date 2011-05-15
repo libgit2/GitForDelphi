@@ -3,7 +3,7 @@ unit uTestsFromLibGit2;
 interface
 
 uses
-   TestFramework, SysUtils, Windows,
+   TestFramework, Windows, SysUtils,
    uGitForDelphi;
 
 type
@@ -19,10 +19,18 @@ type
       function remove_loose_object(const aRepository_folder: PAnsiChar; object_: Pgit_object): Integer;
       function gitfo_exists(const path: String): Integer;
       function gitfo_not_exists(const path: String): Integer;
-      function copydir_recurs(const fromDir, toDir: string): Boolean;
-      function rmdir_recurs(const dir: string): Boolean;
+      function copydir_recurs(const fromDir, toDir: AnsiString): Boolean;
+      function rmdir_recurs(const dir: AnsiString): Boolean;
       function open_temp_repo(var repo: Pgit_repository; const path: PAnsiChar): Integer;
       procedure close_temp_repo(repo: Pgit_repository);
+      function git__suffixcmp(str, suffix: PAnsiChar): Integer;
+      function ensure_repository_init(
+         working_directory: PAnsiChar;
+         repository_kind: Integer;
+         expected_path_index,
+         expected_path_repository,
+         expected_working_directory: PAnsiChar): Integer;
+      function remove_placeholders(directory_path, filename: PAnsiChar): Integer;
    end;
 
    TTestSuiteForLibGit2 = class(TTestSuite, ITestSuite, ITest)
@@ -37,7 +45,10 @@ const
    TEST_INDEXBIG_PATH         = 'resources/big.index';
    TEST_INDEX_ENTRY_COUNT     = 109;
    TEST_INDEX2_ENTRY_COUNT    = 1437;
-   TEMP_REPO_FOLDER: PAnsiChar = './testrepo.git/';
+   TEMP_REPO_FOLDER:          PAnsiChar = '/testrepo.git/';
+   TEMP_REPO_FOLDER_REL:      PAnsiChar = './testrepo.git/';
+   TEMP_REPO_FOLDER_NS:       PAnsiChar = '/testrepo.git';
+   TEMP_REPO_FOLDER_NS_REL:   PAnsiChar = './testrepo.git';
 
    tag1_id           = 'b25fa35b38051e4ae45d4222e795f9df2e43f1d1';
    tag2_id           = '7b4384978d2493e851f9cca7858815fac9b10980';
@@ -146,6 +157,11 @@ begin
       GIT_EPACKEDREFSCORRUPTED   : Result := 'GIT_EPACKEDREFSCORRUPTED';
       GIT_EINVALIDPATH           : Result := 'GIT_EINVALIDPATH';
       GIT_EREVWALKOVER           : Result := 'GIT_EREVWALKOVER';
+      GIT_EINVALIDREFSTATE       : Result := 'GIT_EINVALIDREFSTATE';
+      GIT_ENOTIMPLEMENTED        : Result := 'GIT_ENOTIMPLEMENTED';
+      GIT_EEXISTS                : Result := 'GIT_EEXISTS';
+      GIT_EOVERFLOW              : Result := 'GIT_EOVERFLOW';
+      GIT_ENOTNUM                : Result := 'GIT_ENOTNUM';
       else
          Result := 'Unknown';
    end;
@@ -206,6 +222,58 @@ begin
    Result := GIT_SUCCESS;
 end;
 
+function TTestFromLibGit2.remove_placeholders(directory_path, filename: PAnsiChar): Integer;
+var
+   path, fname: String;
+   tsDirs: TStringList;
+   i, r: Integer;
+   SR: TSearchRec;
+begin
+   /// I think this is what remove_placeholders does:
+   ///   Ensures that `directory_path` exists,
+   ///   then deletes `filename` if it exists in `directory_path` or any subdirectory
+
+   fname := String(AnsiString(filename));
+   path := StringReplace(String(AnsiString(directory_path)), '/', PathDelim, [rfReplaceAll]);
+   if (path <> '') and (path[1] = '\') then
+      Insert('.', path, 1);
+
+   Result := GIT_EINVALIDPATH;
+   if DirectoryExists(path) then
+   begin
+      tsDirs := TStringList.Create;
+      try
+         tsDirs.Add(path);
+         i := 0;
+
+         while i < tsDirs.Count do
+         begin
+            path := tsDirs[i];
+
+            r := FindFirst(path + '*.*', faDirectory, SR);
+            while r = 0 do
+            begin
+               if (SR.Attr and faDirectory = faDirectory) and (SR.Name <> '.') and (SR.Name <> '..') then
+                  tsDirs.Add(path + SR.Name + PathDelim);
+
+               r := FindNext(SR);
+            end;
+
+            FindClose(SR);
+
+            Inc(i);
+         end;
+
+         for i := 0 to tsDirs.Count - 1 do
+            SysUtils.DeleteFile(tsDirs[i] + fname);
+
+         Result := GIT_SUCCESS;
+      finally
+         tsDirs.Free;
+      end;
+   end;
+end;
+
 function cmp_files(const File1, File2: TFileName): Integer;
 var
    ms1, ms2: TMemoryStream;
@@ -231,55 +299,139 @@ begin
    end
 end;
 
-function TTestFromLibGit2.copydir_recurs(const fromDir, toDir: string): Boolean;
-var
-  fos: ShellAPI.TSHFileOpStruct;
-begin
-  ZeroMemory(@fos, SizeOf(fos));
+function TTestFromLibGit2.copydir_recurs(const fromDir, toDir: AnsiString): Boolean;
+   function _copydir_recurs(const _fromDir, _toDir: string): Boolean;
+   var
+     fos: ShellAPI.TSHFileOpStruct;
+   begin
+     ZeroMemory(@fos, SizeOf(fos));
 
-  fos.wFunc  := FO_COPY;
-  fos.fFlags := FOF_FILESONLY;
-  fos.pFrom  := PChar(fromDir + #0);
-  fos.pTo    := PChar(toDir + #0);
+     fos.wFunc  := FO_COPY;
+     fos.fFlags := FOF_FILESONLY or FOF_NOCONFIRMMKDIR;
+     fos.pFrom  := PChar(_fromDir + #0#0);
+     fos.pTo    := PChar(_toDir + #0#0);
 
-  Result := (0 = ShellAPI.ShFileOperation(fos));
-end;
-
-function TTestFromLibGit2.rmdir_recurs(const dir: string): Boolean;
-var
-  fos: ShellAPI.TSHFileOpStruct;
-begin
-  ZeroMemory(@fos, SizeOf(fos));
-
-  fos.wFunc  := FO_DELETE;
-  fos.fFlags := FOF_SILENT or FOF_NOCONFIRMATION;
-  fos.pFrom  := PChar(dir + #0);
-
-  Result := (0 = ShellAPI.ShFileOperation(fos));
-end;
-
-function TTestFromLibGit2.open_temp_repo(var repo: Pgit_repository; const path: PAnsiChar): Integer;
+     Result := (0 = ShellAPI.ShFileOperation(fos));
+   end;
 var
    from_path, to_path: String;
 begin
-   from_path   := StringReplace(String(AnsiString(path)), '/', PathDelim, [rfReplaceAll]);
-   to_path     := StringReplace(String(AnsiString(TEMP_REPO_FOLDER)), '/', PathDelim, [rfReplaceAll]);
+   from_path   := StringReplace(String(AnsiString(fromDir)), '/', PathDelim, [rfReplaceAll]);
+   to_path     := StringReplace(String(AnsiString(ToDir)),   '/', PathDelim, [rfReplaceAll]);
 
-   if not copydir_recurs(from_path, to_path) then
-      Result := GIT_ERROR
-   else
-      Result := git_repository_open(repo, TEMP_REPO_FOLDER);
+   if (from_path <> '') and (from_path[1] = '\') then
+      Insert('.', from_path, 1);
+   if (to_path <> '') and (to_path[1] = '\') then
+      Insert('.', to_path, 1);
+
+   Result := _copydir_recurs(from_path, to_path);
 end;
 
-procedure TTestFromLibGit2.close_temp_repo(repo: Pgit_repository);
+function TTestFromLibGit2.git__suffixcmp(str, suffix: PAnsiChar): Integer;
+var
+   a, b: size_t;
+begin
+   a := strlen(str);
+   b := strlen(suffix);
+   if (a < b) then
+      Result := -1
+   else
+      Result := StrComp(str + (a - b), suffix);
+end;
+
+function TTestFromLibGit2.ensure_repository_init(working_directory: PAnsiChar; repository_kind: Integer; expected_path_index, expected_path_repository,
+  expected_working_directory: PAnsiChar): Integer;
+var
+   win_path: String;
+   path_odb: AnsiString; //[GIT_PATH_MAX];
+   repo: Pgit_repository;
+label
+   cleanup;
+begin
+   win_path := StringReplace(String(AnsiString(working_directory)), '/', PathDelim, [rfReplaceAll]);
+   if (win_path <> '') and (win_path[1] = '\') then
+      Insert('.', win_path, 1);
+
+   if DirectoryExists(win_path) then
+   begin
+      Result := GIT_ERROR;
+      Exit;
+   end;
+
+   path_odb := AnsiString(expected_path_repository) + AnsiString(GIT_OBJECTS_DIR);
+
+   if (git_repository_init(repo, working_directory, repository_kind) < GIT_SUCCESS) then
+   begin
+      Result := GIT_ERROR;
+      Exit;
+   end;
+
+   if ((repo.path_workdir <> nil) or (expected_working_directory <> nil)) then
+   begin
+      if (git__suffixcmp(repo.path_workdir, expected_working_directory) <> 0) then
+         goto cleanup;
+   end;
+
+   if (git__suffixcmp(repo.path_odb, PAnsiChar(path_odb)) <> 0) then
+      goto cleanup;
+
+   if (git__suffixcmp(repo.path_repository, expected_path_repository) <> 0) then
+      goto cleanup;
+
+   if ((repo.path_index <> nil) or (expected_path_index <> nil)) then
+   begin
+      if (git__suffixcmp(repo.path_index, expected_path_index) <> 0) then
+         goto cleanup;
+   end;
+
+   git_repository_free(repo);
+   rmdir_recurs(working_directory);
+
+   Result := GIT_SUCCESS;
+   Exit;
+
+cleanup:
+   git_repository_free(repo);
+   rmdir_recurs(working_directory);
+   Result := GIT_ERROR;
+end;
+
+function TTestFromLibGit2.rmdir_recurs(const dir: AnsiString): Boolean;
+   function _rmdir_recurs(const _dir: string): Boolean;
+   var
+     fos: ShellAPI.TSHFileOpStruct;
+   begin
+     ZeroMemory(@fos, SizeOf(fos));
+
+     fos.wFunc  := FO_DELETE;
+     fos.fFlags := FOF_SILENT or FOF_NOCONFIRMATION;
+     fos.pFrom  := PChar(_dir + #0);
+
+     Result := (0 = ShellAPI.ShFileOperation(fos));
+   end;
 var
    path: String;
 begin
+   path := StringReplace(String(AnsiString(dir)), '/', PathDelim, [rfReplaceAll]);
+   if (path <> '') and (path[1] = '\') then
+      Insert('.', path, 1);
+
+   Result := _rmdir_recurs(path);
+end;
+
+function TTestFromLibGit2.open_temp_repo(var repo: Pgit_repository; const path: PAnsiChar): Integer;
+begin
+   if not copydir_recurs(path, TEMP_REPO_FOLDER) then
+      Result := GIT_ERROR
+   else
+      Result := git_repository_open(repo, TEMP_REPO_FOLDER_REL);
+end;
+
+procedure TTestFromLibGit2.close_temp_repo(repo: Pgit_repository);
+begin
    git_repository_free(repo);
 
-   path     := StringReplace(String(AnsiString(TEMP_REPO_FOLDER)), '/', PathDelim, [rfReplaceAll]);
-
-   rmdir_recurs(path);
+   rmdir_recurs(TEMP_REPO_FOLDER_REL);
 end;
 
 { TTestSuiteForLibGit2 }

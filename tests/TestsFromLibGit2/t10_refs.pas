@@ -28,6 +28,14 @@ type
       procedure create_a_new_symbolic_reference;
       procedure create_a_deep_symbolic_reference;
       procedure create_a_new_OID_reference;
+      procedure can_not_create_a_new_OID_reference_which_targets_at_an_unknown_id;
+   end;
+
+   Test10_refs_overwriteref = class(TTestFromLibGit2)
+      procedure overwrite_an_existing_symbolic_reference;
+      procedure overwrite_an_existing_object_id_reference;
+      procedure overwrite_an_existing_object_id_reference_with_a_symbolic_one;
+      procedure overwrite_an_existing_symbolic_reference_with_an_object_id_one;
    end;
 
    Test10_refs_packfile = class(TTestFromLibGit2)
@@ -41,6 +49,7 @@ type
       procedure renaming_a_packed_reference_does_not_pack_another_reference_which_happens_to_be_in_both_loose_and_pack_state;
       procedure can_not_rename_a_reference_with_the_name_of_an_existing_reference;
       procedure can_not_rename_a_reference_with_an_invalid_name;
+      procedure can_force__rename_a_reference_with_the_name_of_an_existing_reference;
    end;
 
    Test10_refs_delete = class(TTestFromLibGit2)
@@ -55,7 +64,7 @@ type
 implementation
 
 const
-   loose_tag_ref_name: PAnsiChar = 'refs/tags/test';
+   loose_tag_ref_name: PAnsiChar = 'refs/tags/e90810b';
 
 { Test10_refs_readtag }
 
@@ -64,6 +73,7 @@ var
    repo: Pgit_repository;
    reference: Pgit_reference;
    object_: Pgit_object;
+   ref_name_from_tag_name: AnsiString;
 begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
@@ -76,6 +86,11 @@ begin
    must_be_true(object_ <> nil);
    must_be_true(git_object_type(object_) = GIT_OBJ_TAG);
 
+   //* Ensure the name of the tag matches the name of the reference */
+   ref_name_from_tag_name := GIT_REFS_TAGS_DIR + AnsiString(git_tag_name(Pgit_tag(object_)));
+   must_be_true(StrComp(PAnsiChar(ref_name_from_tag_name), loose_tag_ref_name) = 0);
+
+   git_object_close(object_);
    git_repository_free(repo);
 end;
 
@@ -123,6 +138,7 @@ begin
    git_oid_mkstr(@id, current_master_tip);
    must_be_true(git_oid_cmp(@id, git_object_id(object_)) = 0);
 
+   git_object_close(object_);
    git_repository_free(repo);
 end;
 
@@ -150,6 +166,7 @@ begin
    git_oid_mkstr(@id, current_master_tip);
    must_be_true(git_oid_cmp(@id, git_object_id(object_)) = 0);
 
+   git_object_close(object_);
    git_repository_free(repo);
 end;
 
@@ -214,6 +231,7 @@ begin
    must_be_true(object_ <> nil);
    must_be_true(git_object_type(object_) = GIT_OBJ_COMMIT);
 
+   git_object_close(object_);
    git_repository_free(repo);
 end;
 
@@ -237,7 +255,7 @@ end;
 procedure Test10_refs_createref.create_a_new_symbolic_reference;
 var
    new_reference, looked_up_ref, resolved_ref: Pgit_reference;
-   repo: Pgit_repository;
+   repo, repo2: Pgit_repository;
    id: git_oid;
    ref_path: String;
 const
@@ -245,7 +263,7 @@ const
 begin
    git_oid_mkstr(@id, current_master_tip);
 
-   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
+   must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
 
    //* Retrieve the physical path to the symbolic ref for further cleaning */
    ref_path := IncludeTrailingPathDelimiter(String(AnsiString(repo.path_repository))) + String(AnsiString(new_head_tracker));
@@ -270,15 +288,13 @@ begin
    git_repository_free(repo);
 
    //* Similar test with a fresh new repository */
-   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
+   must_pass(git_repository_open(repo2, TEMP_REPO_FOLDER_REL));
 
-   must_pass(git_reference_lookup(looked_up_ref, repo, new_head_tracker));
+   must_pass(git_reference_lookup(looked_up_ref, repo2, new_head_tracker));
    must_pass(git_reference_resolve(resolved_ref, looked_up_ref));
    must_be_true(git_oid_cmp(@id, git_reference_oid(resolved_ref)) = 0);
 
-   git_repository_free(repo);
-
-   SysUtils.DeleteFile(ref_path); //* TODO_: replace with git_reference_delete() when available */
+   close_temp_repo(repo2);
 end;
 
 procedure Test10_refs_createref.create_a_deep_symbolic_reference;
@@ -292,7 +308,7 @@ const
 begin
    git_oid_mkstr(@id, current_master_tip);
 
-   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
+   must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
 
    repo_path := StringReplace(String(AnsiString(repo.path_repository)), '/', PathDelim, [rfReplaceAll]);
    ref_path := IncludeTrailingPathDelimiter(repo_path + String(AnsiString(new_head_tracker)));
@@ -303,15 +319,13 @@ begin
    must_pass(git_reference_resolve(resolved_ref, looked_up_ref));
    must_be_true(git_oid_cmp(@id, git_reference_oid(resolved_ref)) = 0);
 
-   git_repository_free(repo);
-
-   rmdir_recurs(ref_path);
+   close_temp_repo(repo);
 end;
 
 procedure Test10_refs_createref.create_a_new_OID_reference;
 var
    new_reference, looked_up_ref: Pgit_reference;
-   repo: Pgit_repository;
+   repo, repo2: Pgit_repository;
    id: git_oid;
    ref_path: String;
 const
@@ -319,7 +333,7 @@ const
 begin
    git_oid_mkstr(@id, current_master_tip);
 
-   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
+   must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
 
    //* Retrieve the physical path to the symbolic ref for further cleaning */
    ref_path := IncludeTrailingPathDelimiter(String(AnsiString(repo.path_repository))) + String(AnsiString(new_head));
@@ -339,14 +353,33 @@ begin
    git_repository_free(repo);
 
    //* Similar test with a fresh new repository */
-   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
+   must_pass(git_repository_open(repo2, TEMP_REPO_FOLDER_REL));
 
-   must_pass(git_reference_lookup(looked_up_ref, repo, new_head));
+   must_pass(git_reference_lookup(looked_up_ref, repo2, new_head));
    must_be_true(git_oid_cmp(@id, git_reference_oid(looked_up_ref)) = 0);
 
-   git_repository_free(repo);
+   close_temp_repo(repo2);
+end;
 
-   SysUtils.DeleteFile(ref_path); // TODO_: replace with git_reference_delete() when available */
+procedure Test10_refs_createref.can_not_create_a_new_OID_reference_which_targets_at_an_unknown_id;
+var
+   new_reference, looked_up_ref: Pgit_reference;
+   repo: Pgit_repository;
+   id: git_oid;
+const
+   new_head: PAnsiChar = 'refs/heads/new-head';
+begin
+   git_oid_mkstr(@id, 'deadbeef3f795b2b4353bcce3a527ad0a4f7f644');
+
+   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
+
+   //* Create and write the new object id reference */
+   must_fail(git_reference_create_oid(new_reference, repo, new_head, @id));
+
+   //* Ensure the reference can't be looked-up... */
+   must_fail(git_reference_lookup(looked_up_ref, repo, new_head));
+
+   git_repository_free(repo);
 end;
 
 procedure Test10_refs_packfile.create_a_packfile_for_an_empty_folder;
@@ -518,13 +551,13 @@ begin
    must_pass(gitfo_exists(temp_path));
 
    //* Lookup the other reference */
-   must_pass(git_reference_lookup(&another_looked_up_ref, repo, packed_test_head_name));
+   must_pass(git_reference_lookup(another_looked_up_ref, repo, packed_test_head_name));
 
    //* Ensure it's loose */
    must_be_true((another_looked_up_ref.type_ and GIT_REF_PACKED) = 0);
 
    //* Lookup the reference to rename */
-   must_pass(git_reference_lookup(&looked_up_ref, repo, packed_head_name));
+   must_pass(git_reference_lookup(looked_up_ref, repo, packed_head_name));
 
    //* Ensure it's packed */
    must_be_true((looked_up_ref.type_ and GIT_REF_PACKED) <> 0);
@@ -533,7 +566,7 @@ begin
    must_pass(git_reference_rename(looked_up_ref, brand_new_name));
 
    //* Lookup the other reference */
-   must_pass(git_reference_lookup(&another_looked_up_ref, repo, packed_test_head_name));
+   must_pass(git_reference_lookup(another_looked_up_ref, repo, packed_test_head_name));
 
    //* Ensure it's loose */
    must_be_true((another_looked_up_ref.type_ and GIT_REF_PACKED) = 0);
@@ -587,6 +620,27 @@ begin
    close_temp_repo(repo);
 end;
 
+procedure Test10_refs_rename.can_force__rename_a_reference_with_the_name_of_an_existing_reference;
+var
+   looked_up_ref: Pgit_reference;
+   repo: Pgit_repository;
+begin
+   must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
+   try
+      //* An existing reference... */
+      must_pass(git_reference_lookup(looked_up_ref, repo, packed_head_name));
+
+      //* Can not be renamed to the name of another existing reference. */
+      must_pass(git_reference_rename_f(looked_up_ref, packed_test_head_name));
+
+      //* Check we actually renamed it */
+      must_pass(git_reference_lookup(looked_up_ref, repo, packed_test_head_name));
+      must_be_true(StrComp(looked_up_ref.name, packed_test_head_name) = 0);
+   finally
+      close_temp_repo(repo);
+   end;
+end;
+
 { Test10_refs_delete }
 
 procedure Test10_refs_delete.deleting_a_ref_which_is_both_packed_and_loose_should_remove_both_tracks_in_the_filesystem;
@@ -631,10 +685,10 @@ begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
    must_pass(git_reference_listall(@ref_list, repo, GIT_REF_LISTALL));
 
-   (* We have exactly 7 refs in total if we include the packed ones:
+   (* We have exactly 8 refs in total if we include the packed ones:
     * there is a reference that exists both in the packfile and as
     * loose, but we only list it once *)
-   must_be_true(ref_list.count = 7);
+   must_be_true(ref_list.count = 8);
 
    git_strarray_free(@ref_list);
    git_repository_free(repo);
@@ -653,11 +707,130 @@ begin
    git_repository_free(repo);
 end;
 
+const
+   ref_name = 'refs/heads/other';
+   ref_master_name = 'refs/heads/master';
+   ref_branch_name = 'refs/heads/branch';
+   ref_test_name = 'refs/heads/test';
+
+{ Test10_refs_overwriteref }
+
+procedure Test10_refs_overwriteref.overwrite_an_existing_symbolic_reference;
+var
+   ref, branch_ref: Pgit_reference;
+   repo: Pgit_repository;
+begin
+   must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
+
+   //* The target needds to exist and we need to check the name has changed */
+   must_pass(git_reference_create_symbolic(branch_ref, repo, ref_branch_name, ref_master_name));
+   must_pass(git_reference_create_symbolic(ref, repo, ref_name, ref_branch_name));
+   //* Ensure it points to the right place*/
+   must_pass(git_reference_lookup(ref, repo, ref_name));
+   must_be_true(git_reference_type(ref) and GIT_REF_SYMBOLIC <> 0);
+   must_be_true(StrComp(git_reference_target(ref), ref_branch_name) = 0);
+
+   //* Ensure we can't create it unless we force it to */
+   must_fail(git_reference_create_symbolic(ref, repo, ref_name, ref_master_name));
+   must_pass(git_reference_create_symbolic_f(ref, repo, ref_name, ref_master_name));
+
+   //* Ensure it points to the right place */
+   must_pass(git_reference_lookup(ref, repo, ref_name));
+   must_be_true(git_reference_type(ref) and GIT_REF_SYMBOLIC <> 0);
+   must_be_true(StrComp(git_reference_target(ref), ref_master_name) = 0);
+
+   close_temp_repo(repo);
+end;
+
+procedure Test10_refs_overwriteref.overwrite_an_existing_object_id_reference;
+var
+   ref: Pgit_reference;
+   repo: Pgit_repository;
+   id: git_oid;
+begin
+   must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
+   try
+      must_pass(git_reference_lookup(ref, repo, ref_master_name));
+      must_be_true(ref.type_ and GIT_REF_OID <> 0);
+      git_oid_cpy(@id, git_reference_oid(ref));
+
+      //* Create it */
+      must_pass(git_reference_create_oid(ref, repo, ref_name, @id));
+
+      must_pass(git_reference_lookup(ref, repo, ref_test_name));
+      must_be_true(ref.type_ and GIT_REF_OID <> 0);
+      git_oid_cpy(@id, git_reference_oid(ref));
+
+      //* Ensure we can't overwrite unless we force it */
+      must_fail(git_reference_create_oid(ref, repo, ref_name, @id));
+      must_pass(git_reference_create_oid_f(ref, repo, ref_name, @id));
+
+      //* Ensure it has been overwritten */
+      must_pass(git_reference_lookup(ref, repo, ref_name));
+      must_be_true(git_oid_cmp(@id, git_reference_oid(ref)) = 0);
+   finally
+      close_temp_repo(repo);
+   end;
+end;
+
+procedure Test10_refs_overwriteref.overwrite_an_existing_object_id_reference_with_a_symbolic_one;
+var
+   ref: Pgit_reference;
+   repo: Pgit_repository;
+   id: git_oid;
+begin
+   must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
+   try
+      must_pass(git_reference_lookup(ref, repo, ref_master_name));
+      must_be_true(ref.type_ and GIT_REF_OID <> 0);
+      git_oid_cpy(@id, git_reference_oid(ref));
+
+      must_pass(git_reference_create_oid(ref, repo, ref_name, @id));
+      must_fail(git_reference_create_symbolic(ref, repo, ref_name, ref_master_name));
+      must_pass(git_reference_create_symbolic_f(ref, repo, ref_name, ref_master_name));
+
+      //* Ensure it points to the right place */
+      must_pass(git_reference_lookup(ref, repo, ref_name));
+      must_be_true(git_reference_type(ref) and GIT_REF_SYMBOLIC <> 0);
+      must_be_true(StrComp(git_reference_target(ref), ref_master_name) = 0);
+   finally
+      close_temp_repo(repo);
+   end;
+end;
+
+procedure Test10_refs_overwriteref.overwrite_an_existing_symbolic_reference_with_an_object_id_one;
+var
+   ref: Pgit_reference;
+   repo: Pgit_repository;
+   id: git_oid;
+begin
+   must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
+   try
+      must_pass(git_reference_lookup(ref, repo, ref_master_name));
+      must_be_true(ref.type_ and GIT_REF_OID <> 0);
+      git_oid_cpy(@id, git_reference_oid(ref));
+
+      //* Create the symbolic ref */
+      must_pass(git_reference_create_symbolic(ref, repo, ref_name, ref_master_name));
+      //* It shouldn't overwrite unless we tell it to */
+      must_fail(git_reference_create_oid(ref, repo, ref_name, @id));
+      must_pass(git_reference_create_oid_f(ref, repo, ref_name, @id));
+
+      //* Ensure it points to the right place */
+      must_pass(git_reference_lookup(ref, repo, ref_name));
+      must_be_true(git_reference_type(ref) and GIT_REF_OID <> 0);
+      must_be_true(git_oid_cmp(git_reference_oid(ref), @id) = 0);
+   finally
+      close_temp_repo(repo);
+   end;
+end;
+
 initialization
    RegisterTest('From libgit2.t10-refs', Test10_refs_readtag.NamedSuite('readtag'));
    RegisterTest('From libgit2.t10-refs', Test10_refs_readsymref.NamedSuite('readsym'));
    RegisterTest('From libgit2.t10-refs', Test10_refs_readpackedref.NamedSuite('readpacked'));
    RegisterTest('From libgit2.t10-refs', Test10_refs_createref.NamedSuite('create'));
+   RegisterTest('From libgit2.t10-refs', Test10_refs_overwriteref.NamedSuite('overwrite'));
    RegisterTest('From libgit2.t10-refs', Test10_refs_packfile.NamedSuite('pack'));
    RegisterTest('From libgit2.t10-refs', Test10_refs_rename.NamedSuite('rename'));
    RegisterTest('From libgit2.t10-refs', Test10_refs_delete.NamedSuite('delete'));
