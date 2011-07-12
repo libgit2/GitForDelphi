@@ -51,7 +51,7 @@ begin
    begin
       parent := nil;
       old_parent := nil;
-      git_oid_mkstr(@id, PAnsiChar(commit_ids[i]));
+      git_oid_fromstr(@id, PAnsiChar(commit_ids[i]));
 
       must_pass(git_commit_lookup(commit, repo, @id));
 
@@ -111,8 +111,8 @@ var
 begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
-   git_oid_mkstr(@tree_id, tree_oid);
-   git_oid_mkstr(@parent_id, PAnsiChar(commit_ids[4]));
+   git_oid_fromstr(@tree_id, tree_oid);
+   git_oid_fromstr(@parent_id, PAnsiChar(commit_ids[4]));
 
    //* create signatures */
    committer := git_signature_new(COMMITTER_NAME, COMMITTER_EMAIL, 123456789, 60);
@@ -180,7 +180,7 @@ const
 begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
-   git_oid_mkstr(@tree_id, tree_oid);
+   git_oid_fromstr(@tree_id, tree_oid);
 
    //* create signatures */
    committer := git_signature_new(COMMITTER_NAME, COMMITTER_EMAIL, 123456789, 60);

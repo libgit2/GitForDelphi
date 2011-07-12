@@ -134,37 +134,16 @@ begin
 end;
 
 function TTestFromLibGit2.GitReturnValue(aResult: Integer): String;
+var
+   errorName, errorMessage: AnsiString;
 begin
-   case aResult of
-      GIT_ERROR                  : Result := 'GIT_ERROR';
-      GIT_ENOTOID                : Result := 'GIT_ENOTOID';
-      GIT_ENOTFOUND              : Result := 'GIT_ENOTFOUND';
-      GIT_ENOMEM                 : Result := 'GIT_ENOMEM';
-      GIT_EOSERR                 : Result := 'GIT_EOSERR';
-      GIT_EOBJTYPE               : Result := 'GIT_EOBJTYPE';
-      GIT_EOBJCORRUPTED          : Result := 'GIT_EOBJCORRUPTED';
-      GIT_ENOTAREPO              : Result := 'GIT_ENOTAREPO';
-      GIT_EINVALIDTYPE           : Result := 'GIT_EINVALIDTYPE';
-      GIT_EMISSINGOBJDATA        : Result := 'GIT_EMISSINGOBJDATA';
-      GIT_EPACKCORRUPTED         : Result := 'GIT_EPACKCORRUPTED';
-      GIT_EFLOCKFAIL             : Result := 'GIT_EFLOCKFAIL';
-      GIT_EZLIB                  : Result := 'GIT_EZLIB';
-      GIT_EBUSY                  : Result := 'GIT_EBUSY';
-      GIT_EBAREINDEX             : Result := 'GIT_EBAREINDEX';
-      GIT_EINVALIDREFNAME        : Result := 'GIT_EINVALIDREFNAME';
-      GIT_EREFCORRUPTED          : Result := 'GIT_EREFCORRUPTED';
-      GIT_ETOONESTEDSYMREF       : Result := 'GIT_ETOONESTEDSYMREF';
-      GIT_EPACKEDREFSCORRUPTED   : Result := 'GIT_EPACKEDREFSCORRUPTED';
-      GIT_EINVALIDPATH           : Result := 'GIT_EINVALIDPATH';
-      GIT_EREVWALKOVER           : Result := 'GIT_EREVWALKOVER';
-      GIT_EINVALIDREFSTATE       : Result := 'GIT_EINVALIDREFSTATE';
-      GIT_ENOTIMPLEMENTED        : Result := 'GIT_ENOTIMPLEMENTED';
-      GIT_EEXISTS                : Result := 'GIT_EEXISTS';
-      GIT_EOVERFLOW              : Result := 'GIT_EOVERFLOW';
-      GIT_ENOTNUM                : Result := 'GIT_ENOTNUM';
-      else
-         Result := 'Unknown';
-   end;
+   errorName := git_strerror(aResult);
+   errorMessage := git_lasterror;
+
+   if errorMessage <> '' then
+      Result := String(errorName) + ': ' + String(errorMessage)
+   else
+      Result := String(errorName);
 end;
 
 procedure TTestFromLibGit2.must_be_true(b: Boolean; const msg: String = '');
@@ -366,23 +345,31 @@ begin
       Exit;
    end;
 
-   if ((repo.path_workdir <> nil) or (expected_working_directory <> nil)) then
+   if ((git_repository_path(repo, GIT_REPO_PATH_WORKDIR) <> nil) or (expected_working_directory <> nil)) then
    begin
-      if (git__suffixcmp(repo.path_workdir, expected_working_directory) <> 0) then
+      if (git__suffixcmp(git_repository_path(repo, GIT_REPO_PATH_WORKDIR), expected_working_directory) <> 0) then
          goto cleanup;
    end;
 
-   if (git__suffixcmp(repo.path_odb, PAnsiChar(path_odb)) <> 0) then
+   if (git__suffixcmp(git_repository_path(repo, GIT_REPO_PATH_ODB), PAnsiChar(path_odb)) <> 0) then
       goto cleanup;
 
-   if (git__suffixcmp(repo.path_repository, expected_path_repository) <> 0) then
+   if (git__suffixcmp(git_repository_path(repo, GIT_REPO_PATH), expected_path_repository) <> 0) then
       goto cleanup;
 
-   if ((repo.path_index <> nil) or (expected_path_index <> nil)) then
+   if ((git_repository_path(repo, GIT_REPO_PATH_INDEX) <> nil) or (expected_path_index <> nil)) then
    begin
-      if (git__suffixcmp(repo.path_index, expected_path_index) <> 0) then
+      if (git__suffixcmp(git_repository_path(repo, GIT_REPO_PATH_INDEX), expected_path_index) <> 0) then
          goto cleanup;
-   end;
+
+      if (git_repository_is_bare(repo) = 1) then
+         goto cleanup;
+   end
+   else if (git_repository_is_bare(repo) = 0) then
+         goto cleanup;
+
+   if (git_repository_is_empty(repo) = 0) then
+      goto cleanup;
 
    git_repository_free(repo);
    rmdir_recurs(working_directory);
@@ -413,8 +400,8 @@ var
    path: String;
 begin
    path := StringReplace(String(AnsiString(dir)), '/', PathDelim, [rfReplaceAll]);
-   if (path <> '') and (path[1] = '\') then
-      Insert('.', path, 1);
+//   if (path <> '') and (path[1] = '\') then
+//      Insert('.', path, 1);
 
    Result := _rmdir_recurs(path);
 end;
@@ -449,5 +436,5 @@ end;
 
 initialization
    InitLibgit2;
-
+    // TODO : config tests
 end.

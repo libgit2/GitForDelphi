@@ -116,7 +116,7 @@ begin
 
    must_pass(git_revwalk_new(walk, repo));
 
-   git_oid_mkstr(@id, commit_head);
+   git_oid_fromstr(@id, commit_head);
    git_revwalk_push(walk, @id);
 
    must_pass(test_walk(walk, @id, GIT_SORT_TIME, commit_sorting_time, 1));

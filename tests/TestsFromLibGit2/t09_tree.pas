@@ -30,7 +30,7 @@ var
 begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
-   git_oid_mkstr(@id, tree_oid);
+   git_oid_fromstr(@id, tree_oid);
 
    must_pass(git_tree_lookup(tree, repo, @id));
 
@@ -40,7 +40,7 @@ begin
    must_be_true(git_tree_entry_byindex(tree, 0) <> nil);
    must_be_true(git_tree_entry_byindex(tree, 2) <> nil);
    must_be_true(git_tree_entry_byindex(tree, 3) = nil);
-   must_be_true(git_tree_entry_byindex(tree, -1) = nil);
+   must_be_true(git_tree_entry_byindex(tree, Uint(-1)) = nil);
 
    git_tree_close(tree);
    git_repository_free(repo);
@@ -56,7 +56,7 @@ var
 begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
-   git_oid_mkstr(@id, tree_oid);
+   git_oid_fromstr(@id, tree_oid);
 
    must_pass(git_tree_lookup(tree, repo, @id));
 
@@ -97,9 +97,9 @@ var
 begin
    must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
    try
-      git_oid_mkstr(@id, first_tree);
-      git_oid_mkstr(@id2, second_tree);
-      git_oid_mkstr(@bid, blob_oid);
+      git_oid_fromstr(@id, first_tree);
+      git_oid_fromstr(@id2, second_tree);
+      git_oid_fromstr(@bid, blob_oid);
 
       //create a second tree from first tree using `git_treebuilder_insert` on REPOSITORY_FOLDER.
       must_pass(git_tree_lookup(tree, repo, @id));
@@ -128,10 +128,10 @@ var
 begin
    must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
    try
-      git_oid_mkstr(@id, first_tree);
-      git_oid_mkstr(@id2, second_tree);
-      git_oid_mkstr(@id3, third_tree);
-      git_oid_mkstr(@bid, blob_oid);
+      git_oid_fromstr(@id, first_tree);
+      git_oid_fromstr(@id2, second_tree);
+      git_oid_fromstr(@id3, third_tree);
+      git_oid_fromstr(@bid, blob_oid);
 
       //create subtree
       must_pass(git_treebuilder_create(builder, nil));

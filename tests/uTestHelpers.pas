@@ -66,7 +66,7 @@ begin
 
    for i := Low(commits) to High(commits) do
    begin
-      git_oid_mkstr(@id, PAnsiChar(commits[i].id));
+      git_oid_fromstr(@id, PAnsiChar(commits[i].id));
       must_pass(git_commit_lookup(commit, repo, @id));
 
       expected_dt := commits[i].dt;

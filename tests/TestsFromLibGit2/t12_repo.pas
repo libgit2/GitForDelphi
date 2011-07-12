@@ -23,6 +23,8 @@ type
       procedure test_if_a_repository_is_empty_or_not;
    end;
 
+   // TODO : discover tests
+
 implementation
 
 const
@@ -71,7 +73,7 @@ begin
       ChDir(String(path_repository));
       try
          must_pass(git_repository_init(repo, '../d/e.git', 1));
-         must_pass(git__suffixcmp(repo.path_repository, '/a/b/d/e.git/'));
+         must_pass(git__suffixcmp(git_repository_path(repo, GIT_REPO_PATH), '/a/b/d/e.git/'));
 
          git_repository_free(repo);
 
@@ -82,7 +84,7 @@ begin
          ChDir(current_workdir);
       end;
    finally
-      rmdir_recurs(TEMP_REPO_FOLDER);
+      rmdir_recurs(TEMP_REPO_FOLDER_REL);
    end;
 end;
 
@@ -102,12 +104,12 @@ begin
       must_pass(remove_placeholders(TEMP_REPO_FOLDER, 'dummy-marker.txt'));
 
       must_pass(git_repository_open(repo, TEMP_REPO_FOLDER_REL));
-      must_be_true(git_repository_path(repo) <> nil);
-      must_be_true(git_repository_workdir(repo) = nil);
+      must_be_true(git_repository_path(repo, GIT_REPO_PATH) <> nil);
+      must_be_true(git_repository_path(repo, GIT_REPO_PATH_WORKDIR) = nil);
 
       git_repository_free(repo);
    finally
-      if not rmdir_recurs(TEMP_REPO_FOLDER) then
+      if not rmdir_recurs(TEMP_REPO_FOLDER_REL) then
          must_pass(GIT_ERROR);
    end;
 end;
@@ -129,12 +131,12 @@ begin
       must_pass(remove_placeholders(DEST_REPOSITORY_FOLDER, 'dummy-marker.txt'));
 
       must_pass(git_repository_open(repo, DEST_REPOSITORY_FOLDER_REL));
-      must_be_true(git_repository_path(repo) <> nil);
-      must_be_true(git_repository_workdir(repo) <> nil);
+      must_be_true(git_repository_path(repo, GIT_REPO_PATH) <> nil);
+      must_be_true(git_repository_path(repo, GIT_REPO_PATH_WORKDIR) <> nil);
 
       git_repository_free(repo);
    finally
-      if not rmdir_recurs(TEMP_REPO_FOLDER) then
+      if not rmdir_recurs(TEMP_REPO_FOLDER_REL) then
          must_pass(GIT_ERROR);
    end;
 end;
@@ -167,7 +169,7 @@ begin
          ChDir(current_workdir);
       end;
    finally
-      rmdir_recurs(TEMP_REPO_FOLDER);
+      rmdir_recurs(TEMP_REPO_FOLDER_REL);
    end;
 end;
 

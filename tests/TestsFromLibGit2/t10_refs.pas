@@ -50,6 +50,7 @@ type
       procedure can_not_rename_a_reference_with_the_name_of_an_existing_reference;
       procedure can_not_rename_a_reference_with_an_invalid_name;
       procedure can_force__rename_a_reference_with_the_name_of_an_existing_reference;
+      procedure can_not_overwrite_name_of_existing_reference;
    end;
 
    Test10_refs_delete = class(TTestFromLibGit2)
@@ -64,7 +65,8 @@ type
 implementation
 
 const
-   loose_tag_ref_name: PAnsiChar = 'refs/tags/e90810b';
+   loose_tag_ref_name:  PAnsiChar = 'refs/tags/e90810b';
+   ref_master_name:     PAnsiChar = 'refs/heads/master';
 
 { Test10_refs_readtag }
 
@@ -135,7 +137,7 @@ begin
    must_be_true(object_ <> nil);
    must_be_true(git_object_type(object_) = GIT_OBJ_COMMIT);
 
-   git_oid_mkstr(@id, current_master_tip);
+   git_oid_fromstr(@id, current_master_tip);
    must_be_true(git_oid_cmp(@id, git_object_id(object_)) = 0);
 
    git_object_close(object_);
@@ -163,7 +165,7 @@ begin
    must_be_true(object_ <> nil);
    must_be_true(git_object_type(object_) = GIT_OBJ_COMMIT);
 
-   git_oid_mkstr(@id, current_master_tip);
+   git_oid_fromstr(@id, current_master_tip);
    must_be_true(git_oid_cmp(@id, git_object_id(object_)) = 0);
 
    git_object_close(object_);
@@ -261,12 +263,12 @@ var
 const
    new_head_tracker: PAnsiChar = 'another-head-tracker';
 begin
-   git_oid_mkstr(@id, current_master_tip);
+   git_oid_fromstr(@id, current_master_tip);
 
    must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
 
    //* Retrieve the physical path to the symbolic ref for further cleaning */
-   ref_path := IncludeTrailingPathDelimiter(String(AnsiString(repo.path_repository))) + String(AnsiString(new_head_tracker));
+   ref_path := IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) + String(AnsiString(new_head_tracker));
 
    //* Create and write the new symbolic reference */
    must_pass(git_reference_create_symbolic(new_reference, repo, new_head_tracker, current_head_target));
@@ -306,11 +308,11 @@ var
 const
    new_head_tracker: PAnsiChar = 'deep/rooted/tracker';
 begin
-   git_oid_mkstr(@id, current_master_tip);
+   git_oid_fromstr(@id, current_master_tip);
 
    must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
 
-   repo_path := StringReplace(String(AnsiString(repo.path_repository)), '/', PathDelim, [rfReplaceAll]);
+   repo_path := StringReplace(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH))), '/', PathDelim, [rfReplaceAll]);
    ref_path := IncludeTrailingPathDelimiter(repo_path + String(AnsiString(new_head_tracker)));
    ref_path := StringReplace(ref_path, PathDelim, '/', [rfReplaceAll]);
 
@@ -331,12 +333,12 @@ var
 const
    new_head: PAnsiChar = 'refs/heads/new-head';
 begin
-   git_oid_mkstr(@id, current_master_tip);
+   git_oid_fromstr(@id, current_master_tip);
 
    must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
 
    //* Retrieve the physical path to the symbolic ref for further cleaning */
-   ref_path := IncludeTrailingPathDelimiter(String(AnsiString(repo.path_repository))) + String(AnsiString(new_head));
+   ref_path := IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) + String(AnsiString(new_head));
 
    //* Create and write the new object id reference */
    must_pass(git_reference_create_oid(new_reference, repo, new_head, @id));
@@ -369,7 +371,7 @@ var
 const
    new_head: PAnsiChar = 'refs/heads/new-head';
 begin
-   git_oid_mkstr(@id, 'deadbeef3f795b2b4353bcce3a527ad0a4f7f644');
+   git_oid_fromstr(@id, 'deadbeef3f795b2b4353bcce3a527ad0a4f7f644');
 
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
@@ -393,7 +395,7 @@ begin
    must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
 
    temp_path :=
-      IncludeTrailingPathDelimiter(String(AnsiString(repo.path_repository))) +
+      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) +
       IncludeTrailingPathDelimiter(String(AnsiString(GIT_REFS_HEADS_DIR))) +
       'empty_dir';
 
@@ -406,7 +408,7 @@ end;
 
 procedure Test10_refs_packfile.create_a_packfile_from_all_the_loose_rn_a_repo;
 const
-   loose_tag_ref_name: PAnsiChar = 'refs/tags/test';
+   loose_tag_ref_name: PAnsiChar = 'refs/tags/e90810b';
    non_existing_tag_ref_name: PAnsiChar = 'refs/tags/i-do-not-exist';
 var
    repo: Pgit_repository;
@@ -414,32 +416,33 @@ var
    temp_path: String;
 begin
    must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
+   try
+      //* Ensure a known loose ref can be looked up */
+      must_pass(git_reference_lookup(reference, repo, loose_tag_ref_name));
+      must_be_true((reference.type_ and GIT_REF_PACKED) = 0);
+      must_be_true(StrComp(reference.name, loose_tag_ref_name) = 0);
 
-   //* Ensure a known loose ref can be looked up */
-   must_pass(git_reference_lookup(reference, repo, loose_tag_ref_name));
-   must_be_true((reference.type_ and GIT_REF_PACKED) = 0);
-   must_be_true(StrComp(reference.name, loose_tag_ref_name) = 0);
+      must_pass(git_reference_packall(repo));
 
-   must_pass(git_reference_packall(repo));
+      //* Ensure the packed-refs file exists */
+      temp_path :=
+         IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) +
+         String(AnsiString(GIT_PACKEDREFS_FILE));
+      must_pass(gitfo_exists(temp_path));
 
-   //* Ensure the packed-refs file exists */
-   temp_path :=
-      IncludeTrailingPathDelimiter(String(AnsiString(repo.path_repository))) +
-      String(AnsiString(GIT_PACKEDREFS_FILE));
-   must_pass(gitfo_exists(temp_path));
+      //* Ensure the known ref can still be looked up but is now packed */
+      must_pass(git_reference_lookup(reference, repo, loose_tag_ref_name));
+      must_be_true((reference.type_ and GIT_REF_PACKED) <> 0);
+      must_be_true(StrComp(reference.name, loose_tag_ref_name) = 0);
 
-   //* Ensure the known ref can still be looked up but is now packed */
-   must_pass(git_reference_lookup(reference, repo, loose_tag_ref_name));
-   must_be_true((reference.type_ and GIT_REF_PACKED) <> 0);
-   must_be_true(StrComp(reference.name, loose_tag_ref_name) = 0);
-
-   //* Ensure the known ref has been removed from the loose folder structure */
-   temp_path :=
-      IncludeTrailingPathDelimiter(String(AnsiString(repo.path_repository))) +
-      String(AnsiString(loose_tag_ref_name));
-   must_pass(gitfo_not_exists(temp_path));
-
-   close_temp_repo(repo);
+      //* Ensure the known ref has been removed from the loose folder structure */
+      temp_path :=
+         IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) +
+         String(AnsiString(loose_tag_ref_name));
+      must_pass(gitfo_not_exists(temp_path));
+   finally
+      close_temp_repo(repo);
+   end;
 end;
 
 procedure Test10_refs_rename.rename_a_loose_reference;
@@ -454,7 +457,7 @@ begin
 
    //* Ensure the ref doesn't exist on the file system */
    temp_path :=
-      IncludeTrailingPathDelimiter(String(AnsiString(repo.path_repository))) +
+      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) +
       String(AnsiString(new_name));
    must_pass(gitfo_not_exists(temp_path));
 
@@ -481,7 +484,7 @@ begin
 
    //* ...and the ref can be found in the file system */
    temp_path :=
-      IncludeTrailingPathDelimiter(String(AnsiString(repo.path_repository))) +
+      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) +
       String(AnsiString(new_name));
    must_pass(gitfo_exists(temp_path));
 
@@ -500,7 +503,7 @@ begin
 
    //* Ensure the ref doesn't exist on the file system */
    temp_path :=
-      IncludeTrailingPathDelimiter(String(AnsiString(repo.path_repository))) +
+      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) +
       String(AnsiString(packed_head_name));
    must_pass(gitfo_not_exists(temp_path));
 
@@ -527,7 +530,7 @@ begin
 
    //* ...and the ref now happily lives in the file system */
    temp_path :=
-      IncludeTrailingPathDelimiter(String(AnsiString(repo.path_repository))) +
+      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) +
       String(AnsiString(brand_new_name));
    must_pass(gitfo_exists(temp_path));
 
@@ -546,7 +549,7 @@ begin
 
    //* Ensure the other reference exists on the file system */
    temp_path :=
-      IncludeTrailingPathDelimiter(String(AnsiString(repo.path_repository))) +
+      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) +
       String(AnsiString(packed_test_head_name));
    must_pass(gitfo_exists(temp_path));
 
@@ -630,7 +633,7 @@ begin
       //* An existing reference... */
       must_pass(git_reference_lookup(looked_up_ref, repo, packed_head_name));
 
-      //* Can not be renamed to the name of another existing reference. */
+      //* Can be force-renamed to the name of another existing reference. */
       must_pass(git_reference_rename_f(looked_up_ref, packed_test_head_name));
 
       //* Check we actually renamed it */
@@ -639,6 +642,39 @@ begin
    finally
       close_temp_repo(repo);
    end;
+end;
+
+procedure Test10_refs_rename.can_not_overwrite_name_of_existing_reference;
+const
+   ref_one_name:     PAnsiChar = 'refs/heads/one/branch';
+   ref_one_name_new: PAnsiChar = 'refs/heads/two/branch';
+   ref_two_name:     PAnsiChar = 'refs/heads/two';
+var
+   ref, ref_one, ref_one_new, ref_two: Pgit_reference;
+   repo: Pgit_repository;
+   id: git_oid;
+begin
+   must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
+
+   must_pass(git_reference_lookup(ref, repo, ref_master_name));
+   must_be_true(ref.type_ and GIT_REF_OID <> 0);
+
+   git_oid_cpy(@id, git_reference_oid(ref));
+
+   //* Create loose references */
+   must_pass(git_reference_create_oid(ref_one, repo, ref_one_name, @id));
+   must_pass(git_reference_create_oid(ref_two, repo, ref_two_name, @id));
+
+   //* Pack everything */
+   must_pass(git_reference_packall(repo));
+
+   //* Attempt to create illegal reference */
+   must_fail(git_reference_create_oid(ref_one_new, repo, ref_one_name_new, @id));
+
+   //* Illegal reference couldn't be created so this is supposed to fail */
+   must_fail(git_reference_lookup(ref_one_new, repo, ref_one_name_new));
+
+   close_temp_repo(repo);
 end;
 
 { Test10_refs_delete }
@@ -653,7 +689,7 @@ begin
 
    //* Ensure the loose reference exists on the file system */
    temp_path :=
-      IncludeTrailingPathDelimiter(String(AnsiString(repo.path_repository))) +
+      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) +
       String(AnsiString(packed_test_head_name));
    must_pass(gitfo_exists(temp_path));
 
@@ -709,7 +745,6 @@ end;
 
 const
    ref_name = 'refs/heads/other';
-   ref_master_name = 'refs/heads/master';
    ref_branch_name = 'refs/heads/branch';
    ref_test_name = 'refs/heads/test';
 
