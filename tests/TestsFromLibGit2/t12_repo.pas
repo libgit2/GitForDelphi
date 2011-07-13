@@ -23,8 +23,6 @@ type
       procedure test_if_a_repository_is_empty_or_not;
    end;
 
-   // TODO : discover tests
-
 implementation
 
 const

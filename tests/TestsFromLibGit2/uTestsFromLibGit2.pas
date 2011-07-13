@@ -141,9 +141,9 @@ begin
    errorMessage := git_lasterror;
 
    if errorMessage <> '' then
-      Result := String(errorName) + ': ' + String(errorMessage)
+      Result := Format('%d %s: %s', [aResult, errorName, errorMessage])
    else
-      Result := String(errorName);
+      Result := Format('%d %s', [aResult, errorName]);
 end;
 
 procedure TTestFromLibGit2.must_be_true(b: Boolean; const msg: String = '');
@@ -436,5 +436,5 @@ end;
 
 initialization
    InitLibgit2;
-    // TODO : config tests
+
 end.
