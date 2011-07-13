@@ -52,7 +52,7 @@ end;
 procedure Test06_index_read.load_a_standard_index__default_test_index_;
 var
    index: Pgit_index;
-   i, offset: Integer;
+   i: Integer;
    entries: PPgit_index_entry;
    e: Pgit_index_entry;
 begin
@@ -66,12 +66,12 @@ begin
    CheckTrue(git_index_entrycount(index) = TEST_INDEX_ENTRY_COUNT);
    CheckTrue(index.entries.sorted = 1);
 
-   entries := PPgit_index_entry(index.entries.contents);
-
    for i := Low(TEST_ENTRIES) to High(TEST_ENTRIES) do
    begin
-      offset := TEST_ENTRIES[i].index * sizeof(Pgit_index_entry);
-      e := PPgit_index_entry(Integer(entries) + offset)^;
+      entries := PPgit_index_entry(index.entries.contents);
+
+      Inc(entries, TEST_ENTRIES[i].index);
+      e := entries^;
 
       CheckTrue(StrComp(e.path, TEST_ENTRIES[i].path) = 0);
       CheckTrue(e.mtime.seconds = TEST_ENTRIES[i].mtime);
