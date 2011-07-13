@@ -23,3 +23,8 @@ you can use it while in the master branch like this
 
 See `LIBGIT2_sha` file for the libgit2 commit that the dll and code are currently based on.
 
+License
+=======
+
+MIT. See LICENSE file.
+
