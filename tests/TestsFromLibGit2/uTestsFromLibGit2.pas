@@ -286,7 +286,7 @@ function TTestFromLibGit2.copydir_recurs(const fromDir, toDir: AnsiString): Bool
      ZeroMemory(@fos, SizeOf(fos));
 
      fos.wFunc  := FO_COPY;
-     fos.fFlags := FOF_FILESONLY or FOF_NOCONFIRMMKDIR;
+     fos.fFlags := FOF_FILESONLY or FOF_SILENT or FOF_NOCONFIRMATION or FOF_NOERRORUI or FOF_NOCONFIRMMKDIR;
      fos.pFrom  := PChar(_fromDir + #0#0);
      fos.pTo    := PChar(_toDir + #0#0);
 

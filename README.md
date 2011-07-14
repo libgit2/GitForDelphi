@@ -8,7 +8,7 @@ To use, just add `uGitForDelphi` to the uses section, and call `InitLibgit2;` an
 Current status
 --------------
 
-Currently, GitForDelphi is exposing the libgit2 C API exactly, all function exports from git2-0.dll have been converted, including necessary structures. Some of the tests from libgit2 have been converted and are all passing.
+Currently, GitForDelphi is exposing the libgit2 C API exactly, all function exports from git2.dll have been converted, including necessary structures. Some of the tests from libgit2 have been converted and are all passing.
 
 I intend to make a wrapper class, `TGitRepository` to give a nicer Delphi-like interface to working with repositories.
 
@@ -16,10 +16,10 @@ I intend to make a wrapper class, `TGitRepository` to give a nicer Delphi-like i
 
 ### pre-built libgit2 DLL:
 
-git2-0.dll built from Visual C++ 2010 Express is in the `binary` branch,
+git2.dll built from Visual C++ 2010 Express is in the `binary` branch,
 you can use it while in the master branch like this
 
-    git checkout origin/binary -- tests/git2-0.dll; git reset tests/git2-0.dll
+    git checkout origin/binary -- tests/git2.dll; git reset tests/git2.dll
 
 See `LIBGIT2_sha` file for the libgit2 commit that the dll and code are currently based on.
 
