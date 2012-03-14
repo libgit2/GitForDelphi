@@ -704,7 +704,7 @@ var
    // GIT_EXTERN(int) git_commit_create(git_oid *oid, git_repository *repo, const char *update_ref, const git_signature *author, const git_signature *committer, const char *message_encoding, const char *message, const git_tree *tree, int parent_count, const git_commit *parents[]);
    git_commit_create:                  function (oid: Pgit_oid; repo: Pgit_repository; const update_ref: PAnsiChar; const author, committer: Pgit_signature; const message_encoding, message_: PAnsiChar; const tree: Pgit_tree; parent_count: Integer; const parents: PPgit_commit): Integer; stdcall;
    // GIT_EXTERN(int) git_commit_create_v(git_oid *oid, git_repository *repo, const char *update_ref, const git_signature *author, const git_signature *committer, const char *message_encoding, const char *message, const git_tree *tree, int parent_count, ...);
-   git_commit_create_v:                function (oid: Pgit_oid; repo: Pgit_repository; const update_ref: PAnsiChar; const author, committer: Pgit_signature; const message_encoding, message_: PAnsiChar; const tree: Pgit_tree; parent_count: Integer): Integer varargs; stdcall;
+   git_commit_create_v:                function (oid: Pgit_oid; repo: Pgit_repository; const update_ref: PAnsiChar; const author, committer: Pgit_signature; const message_encoding, message_: PAnsiChar; const tree: Pgit_tree; parent_count: Integer): Integer; cdecl varargs; // varargs has to be cdecl
 
    /// common.h
    ///
