@@ -10,12 +10,17 @@ type
    Test08_tag_read = class(TTestFromLibGit2)
       procedure read_and_parse_a_tag_from_the_repository;
       procedure list_all_tag_names_from_the_repository;
+      procedure list_all_tag_names_from_the_repository_matching_a_specified_pattern;
+      procedure read_and_parse_a_tag_without_a_tagger_field;
+
    end;
 
    Test08_tag_write = class(TTestFromLibGit2)
       procedure write_a_tag_to_the_repository_and_read_it_again;
       procedure attempt_to_write_a_tag_bearing_the_same_name_than_an_already_existing_tag;
       procedure replace_an_already_existing_tag;
+      procedure write_a_lightweight_tag_to_the_repository_and_read_it_again;
+      procedure attempt_to_write_a_lightweight_tag_bearing_the_same_name_than_an_already_existing_tag;
       procedure delete_an_already_existing_tag;
    end;
 
@@ -68,6 +73,73 @@ begin
    must_be_true(tag_list.count = 3);
 
    git_strarray_free(@tag_list);
+   git_repository_free(repo);
+end;
+
+procedure Test08_tag_read.list_all_tag_names_from_the_repository_matching_a_specified_pattern;
+   function ensure_tag_pattern_match(repo: Pgit_repository; pattern: PAnsiChar; expected_matches: size_t): Integer;
+   var
+      tag_list: git_strarray;
+      error: Integer;
+   begin
+      error := GIT_SUCCESS;
+      try
+         error := git_tag_list_match(@tag_list, pattern, repo);
+         if (error = GIT_SUCCESS) then
+         begin
+            if (tag_list.count <> expected_matches) then
+               error := GIT_ERROR;
+         end;
+      finally
+         git_strarray_free(@tag_list);
+         Result := error;
+      end;
+   end;
+var
+   repo: Pgit_repository;
+begin
+   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
+   must_pass(ensure_tag_pattern_match(repo, '', 3));
+   must_pass(ensure_tag_pattern_match(repo, '*', 3));
+   must_pass(ensure_tag_pattern_match(repo, 't*', 1));
+   must_pass(ensure_tag_pattern_match(repo, '*b', 2));
+   must_pass(ensure_tag_pattern_match(repo, 'e', 0));
+   must_pass(ensure_tag_pattern_match(repo, 'e90810b', 1));
+   must_pass(ensure_tag_pattern_match(repo, 'e90810[ab]', 1));
+   git_repository_free(repo);
+end;
+
+const
+   bad_tag_id           = 'eda9f45a2a98d4c17a09d681d88569fa4ea91755';
+   badly_tagged_commit  = 'e90810b8df3e80c413d903f631643c716887138d';
+
+procedure Test08_tag_read.read_and_parse_a_tag_without_a_tagger_field;
+var
+   repo: Pgit_repository;
+   bad_tag: Pgit_tag;
+   commit: Pgit_commit;
+   id, id_commit: git_oid;
+begin
+   must_pass(git_repository_open(repo, BAD_TAG_REPOSITORY_FOLDER));
+
+   git_oid_fromstr(@id, bad_tag_id);
+   git_oid_fromstr(@id_commit, badly_tagged_commit);
+
+   must_pass(git_tag_lookup(bad_tag, repo, @id));
+   must_be_true(bad_tag <> nil);
+
+   must_be_true(StrComp(git_tag_name(bad_tag), 'e90810b') = 0);
+   must_be_true(git_oid_cmp(@id, git_tag_id(bad_tag)) = 0);
+   must_be_true(git_tag_tagger(bad_tag) = nil);
+
+   must_pass(git_tag_target(commit, bad_tag));
+   must_be_true(commit <> nil);
+
+   must_be_true(git_oid_cmp(@id_commit, git_commit_id(commit)) = 0);
+
+   git_tag_free(bad_tag);
+   git_commit_free(commit);
+
    git_repository_free(repo);
 end;
 
@@ -199,6 +271,65 @@ begin
    close_temp_repo(repo);
 
    git_reference_free(ref_tag);
+end;
+
+procedure Test08_tag_write.write_a_lightweight_tag_to_the_repository_and_read_it_again;
+var
+   repo: Pgit_repository;
+   target_id, object_id: git_oid;
+   ref_tag: Pgit_reference;
+   target: Pgit_object;
+begin
+   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
+
+   git_oid_fromstr(@target_id, tagged_commit);
+   must_pass(git_object_lookup(target, repo, @target_id, GIT_OBJ_COMMIT));
+
+   must_pass(git_tag_create_lightweight(
+      @object_id,
+      repo,
+      'light-tag',
+      target,
+      0));
+
+   git_object_free(target);
+
+   must_be_true(git_oid_cmp(@object_id, @target_id) = 0);
+
+   must_pass(git_reference_lookup(ref_tag, repo, 'refs/tags/light-tag'));
+   must_be_true(git_oid_cmp(git_reference_oid(ref_tag), @target_id) = 0);
+
+   must_pass(git_tag_delete(repo, 'light-tag'));
+
+   git_repository_free(repo);
+
+   git_reference_free(ref_tag);
+end;
+
+procedure Test08_tag_write.attempt_to_write_a_lightweight_tag_bearing_the_same_name_than_an_already_existing_tag;
+var
+   repo: Pgit_repository;
+   target_id, object_id, existing_object_id: git_oid;
+   target: Pgit_object;
+begin
+   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
+
+   git_oid_fromstr(@target_id, tagged_commit);
+   must_pass(git_object_lookup(target, repo, @target_id, GIT_OBJ_COMMIT));
+
+   must_fail(git_tag_create_lightweight(
+      @object_id,
+      repo,
+      'e90810b',
+      target,
+      0));
+
+   git_oid_fromstr(@existing_object_id, tag2_id);
+   must_be_true(git_oid_cmp(@object_id, @existing_object_id) = 0);
+
+   git_object_free(target);
+
+   git_repository_free(repo);
 end;
 
 procedure Test08_tag_write.delete_an_already_existing_tag;

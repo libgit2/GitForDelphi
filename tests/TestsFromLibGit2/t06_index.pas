@@ -40,9 +40,6 @@ begin
    must_pass(git_index_open(index, PAnsiChar('in-memory-index')));
 //   CheckTrue(index.on_disk = 0);
 
-   must_pass(git_index_read(index));
-
-//   CheckTrue(index.on_disk = 0);
    CheckTrue(git_index_entrycount(index) = 0);
 //   CheckTrue(index.entries.sorted = 1);
 
@@ -57,12 +54,8 @@ var
    e: Pgit_index_entry;
 begin
    must_pass(git_index_open(index, TEST_INDEX_PATH));
-
 //   CheckTrue(index.on_disk = 1);
 
-   must_pass(git_index_read(index));
-
-//   CheckTrue(index.on_disk = 1);
    CheckTrue(git_index_entrycount(index) = TEST_INDEX_ENTRY_COUNT);
 //   CheckTrue(index.entries.sorted = 1);
 
@@ -72,12 +65,11 @@ begin
 //
 //      Inc(entries, TEST_ENTRIES[i].index);
 //      e := entries^;
-//
-//      CheckTrue(StrComp(e.path, TEST_ENTRIES[i].path) = 0);
-//      CheckTrue(e.mtime.seconds = TEST_ENTRIES[i].mtime);
-//      CheckTrue(e.file_size = TEST_ENTRIES[i].file_size);
-      e := git_index_get(index, i);
-      must_be_true(Assigned(e));
+      e := git_index_get(index, TEST_ENTRIES[i].index);
+
+      CheckTrue(StrComp(e.path, TEST_ENTRIES[i].path) = 0);
+      CheckTrue(e.mtime.seconds = TEST_ENTRIES[i].mtime);
+      CheckTrue(e.file_size = TEST_ENTRIES[i].file_size);
    end;
 
    git_index_free(index);
@@ -90,9 +82,6 @@ begin
    must_pass(git_index_open(index, TEST_INDEX2_PATH));
 //   CheckTrue(index.on_disk = 1);
 
-   must_pass(git_index_read(index));
-
-//   CheckTrue(index.on_disk = 1);
    CheckTrue(git_index_entrycount(index) = TEST_INDEX2_ENTRY_COUNT);
 //   CheckTrue(index.entries.sorted = 1);
 //   CheckTrue(index.tree <> nil);
@@ -108,7 +97,6 @@ var
    i, idx: Integer;
 begin
    must_pass(git_index_open(index, TEST_INDEX_PATH));
-   must_pass(git_index_read(index));
 
    for i := 0 to 4 do
    begin
@@ -144,7 +132,6 @@ begin
    CopyFile(TEST_INDEXBIG_PATH, 'index_rewrite', true);
 
    must_pass(git_index_open(index, 'index_rewrite'));
-   must_pass(git_index_read(index));
 //   must_be_true(index.on_disk > 0);
 
    must_pass(git_index_write(index));

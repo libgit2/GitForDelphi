@@ -79,7 +79,6 @@ const
       ret, i: Integer;
       result_array: array [0..commit_count-1] of Integer;
    begin
-      git_revwalk_reset(walk);
       git_revwalk_sorting(walk, flags);
       git_revwalk_push(walk, root);
 
@@ -113,11 +112,9 @@ var
    walk: Pgit_revwalk;
 begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
-
    must_pass(git_revwalk_new(walk, repo));
 
    git_oid_fromstr(@id, commit_head);
-   git_revwalk_push(walk, @id);
 
    must_pass(test_walk(walk, @id, GIT_SORT_TIME, commit_sorting_time, 1));
    must_pass(test_walk(walk, @id, GIT_SORT_TOPOLOGICAL, commit_sorting_topo, 2));

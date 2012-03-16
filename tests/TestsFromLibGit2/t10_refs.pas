@@ -52,15 +52,23 @@ type
       procedure can_force__rename_a_packed_reference_with_the_name_of_an_existing_loose_and_packed_reference;
       procedure can_force__rename_a_loose_reference_with_the_name_of_an_existing_loose_reference;
       procedure can_not_overwrite_name_of_existing_reference;
+      procedure can_be_renamed_to_a_new_name_prefixed_with_the_old_name;
+      procedure can_move_a_reference_to_a_upper_reference_hierarchy;
    end;
 
    Test10_refs_delete = class(TTestFromLibGit2)
       procedure deleting_a_ref_which_is_both_packed_and_loose_should_remove_both_tracks_in_the_filesystem;
+      procedure can_delete_a_just_packed_reference;
    end;
 
    Test10_refs_list = class(TTestFromLibGit2)
       procedure try_to_list_all_the_references_in_our_test_repo;
       procedure try_to_list_only_the_symbolic_references;
+   end;
+
+   Test10_refs_reflog = class(TTestFromLibGit2)
+      procedure write_a_reflog_for_a_given_reference_and_ensure_it_can_be_read_back;
+      procedure avoid_writing_an_obviously_wrong_reflog;
    end;
 
 implementation
@@ -777,6 +785,83 @@ begin
    git_reference_free(ref_two);
 end;
 
+const
+   ref_two_name = 'refs/heads/two';
+   ref_two_name_new = 'refs/heads/two/two';
+
+procedure Test10_refs_rename.can_be_renamed_to_a_new_name_prefixed_with_the_old_name;
+var
+   ref, ref_two, looked_up_ref: Pgit_reference;
+   repo: Pgit_repository;
+   id: git_oid;
+begin
+   must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
+   try
+      must_pass(git_reference_lookup(ref, repo, ref_master_name));
+      must_be_true((git_reference_type(ref) and GIT_REF_OID) <> 0);
+
+      git_oid_cpy(@id, git_reference_oid(ref));
+
+      //* Create loose references */
+      must_pass(git_reference_create_oid(ref_two, repo, ref_two_name, @id, 0));
+
+      //* An existing reference... */
+      must_pass(git_reference_lookup(looked_up_ref, repo, ref_two_name));
+
+      //* Can be rename to a new name starting with the old name. */
+      must_pass(git_reference_rename(looked_up_ref, ref_two_name_new, 0));
+      git_reference_free(looked_up_ref);
+
+      //* Check we actually renamed it */
+      must_pass(git_reference_lookup(looked_up_ref, repo, ref_two_name_new));
+      must_be_true(StrComp(git_reference_name(looked_up_ref), ref_two_name_new) = 0);
+      git_reference_free(looked_up_ref);
+      must_fail(git_reference_lookup(looked_up_ref, repo, ref_two_name));
+
+      git_reference_free(ref);
+      git_reference_free(ref_two);
+      git_reference_free(looked_up_ref);
+   finally
+      close_temp_repo(repo);
+   end;
+end;
+
+procedure Test10_refs_rename.can_move_a_reference_to_a_upper_reference_hierarchy;
+var
+   ref, ref_two, looked_up_ref: Pgit_reference;
+   repo: Pgit_repository;
+   id: git_oid;
+begin
+   must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
+   try
+      must_pass(git_reference_lookup(ref, repo, ref_master_name));
+      must_be_true((git_reference_type(ref) and GIT_REF_OID) <> 0);
+
+      git_oid_cpy(@id, git_reference_oid(ref));
+
+      //* Create loose references */
+      must_pass(git_reference_create_oid(ref_two, repo, ref_two_name_new, @id, 0));
+      git_reference_free(ref_two);
+
+      //* An existing reference... */
+      must_pass(git_reference_lookup(looked_up_ref, repo, ref_two_name_new));
+
+      //* Can be renamed upward the reference tree. */
+      must_pass(git_reference_rename(looked_up_ref, ref_two_name, 0));
+      git_reference_free(looked_up_ref);
+
+      //* Check we actually renamed it */
+      must_pass(git_reference_lookup(&looked_up_ref, repo, ref_two_name));
+      must_be_true(StrComp(git_reference_name(looked_up_ref), ref_two_name) = 0);
+      git_reference_free(looked_up_ref);
+      must_fail(git_reference_lookup(looked_up_ref, repo, ref_two_name_new));
+      git_reference_free(ref);
+      git_reference_free(looked_up_ref);
+   finally
+      close_temp_repo(repo);
+   end;
+end;
+
 { Test10_refs_delete }
 
 procedure Test10_refs_delete.deleting_a_ref_which_is_both_packed_and_loose_should_remove_both_tracks_in_the_filesystem;
@@ -811,6 +896,44 @@ begin
    close_temp_repo(repo);
 
    git_reference_free(another_looked_up_ref);
+end;
+
+procedure Test10_refs_delete.can_delete_a_just_packed_reference;
+var
+   ref: Pgit_reference;
+   repo: Pgit_repository;
+   id: git_oid;
+const
+   new_ref = 'refs/heads/new_ref';
+begin
+   git_oid_fromstr(@id, current_master_tip);
+
+   must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
+   try
+      //* Create and write the new object id reference */
+      must_pass(git_reference_create_oid(ref, repo, new_ref, @id, 0));
+      git_reference_free(ref);
+
+      //* Lookup the reference */
+      must_pass(git_reference_lookup(ref, repo, new_ref));
+
+      //* Ensure it's a loose reference */
+      must_be_true(git_reference_is_packed(ref) = 0);
+
+      //* Pack all existing references */
+      must_pass(git_reference_packall(repo));
+
+      //* Reload the reference from disk */
+      must_pass(git_reference_reload(ref));
+
+      //* Ensure it's a packed reference */
+      must_be_true(git_reference_is_packed(ref) = 1);
+
+      //* This should pass */
+      must_pass(git_reference_delete(ref));
+   finally
+      close_temp_repo(repo);
+   end;
 end;
 
 { Test10_refs_list }
@@ -984,6 +1107,148 @@ begin
    end;
 end;
 
+{ Test10_refs_reflog }
+
+function assert_signature(expected, actual: Pgit_signature): Integer;
+begin
+   if (actual = nil) then
+   begin
+      Result := GIT_ERROR;
+      Exit;
+   end;
+
+   if (StrComp(expected.name, actual.name) <> 0) then
+   begin
+      Result := GIT_ERROR;
+      Exit;
+   end;
+
+   if (StrComp(expected.email, actual.email) <> 0) then
+   begin
+      Result := GIT_ERROR;
+      Exit;
+   end;
+
+   if (expected.when.offset <> actual.when.offset) then
+   begin
+      Result := GIT_ERROR;
+      Exit;
+   end;
+
+   if (expected.when.time <> actual.when.time) then
+   begin
+      Result := GIT_ERROR;
+      Exit;
+   end;
+
+   Result := GIT_SUCCESS;
+end;
+
+const
+   new_ref = 'refs/heads/test-reflog';
+   commit_msg = 'commit: bla bla';
+
+procedure Test10_refs_reflog.write_a_reflog_for_a_given_reference_and_ensure_it_can_be_read_back;
+var
+   repo, repo2: Pgit_repository;
+   ref, lookedup_ref: Pgit_reference;
+   oid: git_oid;
+   committer: Pgit_signature;
+   reflog: Pgit_reflog;
+   entry: Pgit_reflog_entry;
+   oid_str: array[0..GIT_OID_HEXSZ] of PAnsiChar;
+begin
+   must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
+
+   //* Create a new branch pointing at the HEAD */
+   git_oid_fromstr(@oid, current_master_tip);
+   must_pass(git_reference_create_oid(ref, repo, new_ref, @oid, 0));
+   git_reference_free(ref);
+   must_pass(git_reference_lookup(ref, repo, new_ref));
+
+   must_pass(git_signature_now(committer, 'foo', 'foo@bar'));
+
+   must_pass(git_reflog_write(ref, nil, committer, nil));
+   must_fail(git_reflog_write(ref, nil, committer, 'no ancestor nil for an existing reflog'));
+   must_fail(git_reflog_write(ref, nil, committer, 'no'#10'newline'));
+   must_pass(git_reflog_write(ref, @oid, committer, commit_msg));
+
+   git_repository_free(repo);
+
+   //* Reopen a new instance of the repository */
+   must_pass(git_repository_open(repo2, TEMP_REPO_FOLDER_REL));
+
+   //* Lookup the preivously created branch */
+   must_pass(git_reference_lookup(lookedup_ref, repo2, new_ref));
+
+   //* Read and parse the reflog for this branch */
+   must_pass(git_reflog_read(reflog, lookedup_ref));
+//   must_be_true(reflog.entries.length = 2);
+   must_be_true(git_reflog_entrycount(reflog) = 2);
+
+//   git_vector_get(&reflog->entries, 0);
+   entry := git_reflog_entry_byindex(reflog, 0);
+//   must_pass(assert_signature(committer, entry.committer));
+   must_pass(assert_signature(committer, git_reflog_entry_committer(entry)));
+
+//   git_oid_to_string(oid_str, GIT_OID_HEXSZ+1, entry.oid_old);
+   git_oid_to_string(@oid_str, GIT_OID_HEXSZ+1, git_reflog_entry_oidold(entry));
+   must_be_true(StrComp('0000000000000000000000000000000000000000', PAnsiChar(@oid_str)) = 0);
+//   git_oid_to_string(@oid_str, GIT_OID_HEXSZ+1, entry.oid_cur);
+   git_oid_to_string(@oid_str, GIT_OID_HEXSZ+1, git_reflog_entry_oidnew(entry));
+   must_be_true(StrComp(current_master_tip, PAnsiChar(@oid_str)) = 0);
+//   must_be_true(entry.msg = nil);
+   must_be_true(git_reflog_entry_msg(entry) = nil);
+
+   entry := git_reflog_entry_byindex(reflog, 1);
+   must_pass(assert_signature(committer, git_reflog_entry_committer(entry)));
+   git_oid_to_string(@oid_str, GIT_OID_HEXSZ+1, git_reflog_entry_oidold(entry));
+   must_be_true(StrComp(current_master_tip, @oid_str) = 0);
+   git_oid_to_string(@oid_str, GIT_OID_HEXSZ+1, git_reflog_entry_oidnew(entry));
+   must_be_true(StrComp(current_master_tip, @oid_str) = 0);
+   must_be_true(StrComp(commit_msg, git_reflog_entry_msg(entry)) = 0);
+
+   git_signature_free(committer);
+   git_reflog_free(reflog);
+   close_temp_repo(repo2);
+
+   git_reference_free(ref);
+   git_reference_free(lookedup_ref);
+end;
+
+procedure Test10_refs_reflog.avoid_writing_an_obviously_wrong_reflog;
+var
+   repo: Pgit_repository;
+   ref: Pgit_reference;
+   oid: git_oid;
+   committer: Pgit_signature;
+begin
+   must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
+   try
+      //* Create a new branch pointing at the HEAD */
+      git_oid_fromstr(@oid, current_master_tip);
+      must_pass(git_reference_create_oid(ref, repo, new_ref, @oid, 0));
+      git_reference_free(ref);
+      must_pass(git_reference_lookup(ref, repo, new_ref));
+
+      must_pass(git_signature_now(committer, 'foo', 'foo@bar'));
+
+      //* Write the reflog for the new branch */
+      must_pass(git_reflog_write(ref, nil, committer, nil));
+
+      //* Try to update the reflog with wrong information:
+      //* It's no new reference, so the ancestor OID cannot
+      //* be nil. */
+      must_fail(git_reflog_write(ref, nil, committer, nil));
+
+      git_signature_free(committer);
+
+      git_reference_free(ref);
+   finally
+      close_temp_repo(repo);
+   end;
+end;
+
 initialization
    RegisterTest('From libgit2.t10-refs', Test10_refs_readtag.NamedSuite('readtag'));
    RegisterTest('From libgit2.t10-refs', Test10_refs_readsymref.NamedSuite('readsym'));
@@ -994,6 +1259,7 @@ initialization
    RegisterTest('From libgit2.t10-refs', Test10_refs_rename.NamedSuite('rename'));
    RegisterTest('From libgit2.t10-refs', Test10_refs_delete.NamedSuite('delete'));
    RegisterTest('From libgit2.t10-refs', Test10_refs_list.NamedSuite('list'));
+   RegisterTest('From libgit2.t10-refs', Test10_refs_reflog.NamedSuite('reflog'));
 
 end.
 

@@ -40,6 +40,7 @@ type
 
 const
    REPOSITORY_FOLDER_         = 'resources/testrepo.git';
+   BAD_TAG_REPOSITORY_FOLDER_ = 'resources/bad_tag.git/';
    TEST_INDEX_PATH            = 'resources/testrepo.git/index';
    TEST_INDEX2_PATH           = 'resources/gitgit.index';
    TEST_INDEXBIG_PATH         = 'resources/big.index';
@@ -74,6 +75,7 @@ const
    );
 
 function REPOSITORY_FOLDER: PAnsiChar;
+function BAD_TAG_REPOSITORY_FOLDER: PAnsiChar;
 function OctalToInt(const Value: string): Longint;
 function cmp_files(const File1, File2: TFileName): Integer;
 
@@ -82,9 +84,19 @@ implementation
 uses
    Classes, ShellAPI;
 
+function _TestFolder(const aSubFolder: AnsiString): PAnsiChar;
+begin
+   Result := PAnsiChar(AnsiString(StringReplace(ExtractFilePath(ParamStr(0)), PathDelim, '/', [rfReplaceAll]) + String(aSubFolder)));
+end;
+
 function REPOSITORY_FOLDER: PAnsiChar;
 begin
-   Result := PAnsiChar(AnsiString(StringReplace(ExtractFilePath(ParamStr(0)), PathDelim, '/', [rfReplaceAll]) + REPOSITORY_FOLDER_));
+   Result := _TestFolder(REPOSITORY_FOLDER_);
+end;
+
+function BAD_TAG_REPOSITORY_FOLDER: PAnsiChar;
+begin
+   Result := _TestFolder(BAD_TAG_REPOSITORY_FOLDER_);
 end;
 
 function OctalToInt(const Value: string): Longint;
