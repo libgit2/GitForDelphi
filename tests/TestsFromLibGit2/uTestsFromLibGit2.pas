@@ -31,6 +31,9 @@ type
          expected_path_repository,
          expected_working_directory: PAnsiChar): Integer;
       function remove_placeholders(directory_path, filename: PAnsiChar): Integer;
+      function RenameDir(const aFrom, aTo: AnsiString): Boolean;
+      function p_unlink(const aFileName: String): Integer;
+      function p_rename(const aFrom, aTo: AnsiString): Integer;
    end;
 
    TTestSuiteForLibGit2 = class(TTestSuite, ITestSuite, ITest)
@@ -50,6 +53,8 @@ const
    TEMP_REPO_FOLDER_REL:      PAnsiChar = './testrepo.git/';
    TEMP_REPO_FOLDER_NS:       PAnsiChar = '/testrepo.git';
    TEMP_REPO_FOLDER_NS_REL:   PAnsiChar = './testrepo.git';
+   TEST_STD_REPO_FOLDER:      PAnsiChar = '/testrepo.git/.git/';
+   TEST_STD_REPO_FOLDER_REL:  PAnsiChar = 'testrepo.git/.git/';
 
    tag1_id           = 'b25fa35b38051e4ae45d4222e795f9df2e43f1d1';
    tag2_id           = '7b4384978d2493e851f9cca7858815fac9b10980';
@@ -271,6 +276,17 @@ begin
    end;
 end;
 
+function TTestFromLibGit2.RenameDir(const aFrom, aTo: AnsiString): Boolean;
+var
+   full_to: String;
+begin
+   copydir_recurs(aFrom, aTo);
+   rmdir_recurs(aFrom);
+
+   full_to := GetCurrentDir + '\' + StringReplace(String(aTo), '/', '\', [rfReplaceAll]);
+   Result := DirectoryExists(full_to);
+end;
+
 function cmp_files(const File1, File2: TFileName): Integer;
 var
    ms1, ms2: TMemoryStream;
@@ -430,6 +446,24 @@ begin
       Result := GIT_ERROR
    else
       Result := git_repository_open(repo, TEMP_REPO_FOLDER_REL);
+end;
+
+function TTestFromLibGit2.p_rename(const aFrom, aTo: AnsiString): Integer;
+begin
+   RenameFile(aFrom, aTo);
+   if (not FileExists(aFrom)) and FileExists(aTo) then
+      Result := 0
+   else
+      Result := GIT_ERROR;
+end;
+
+function TTestFromLibGit2.p_unlink(const aFileName: String): Integer;
+begin
+   SysUtils.DeleteFile(aFileName);
+   if FileExists(aFileName) then
+      Result := GIT_ERROR
+   else
+      Result := 0;
 end;
 
 procedure TTestFromLibGit2.close_temp_repo(repo: Pgit_repository);
