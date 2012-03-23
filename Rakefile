@@ -1,5 +1,5 @@
 task :clean do
-   sh "rm -f *.dcu tests/*.dcu tests/*.exe tests/*.identcache tests/*.local tests/TestsFromLibGit2/*.dcu tests/dunit.ini "
+   sh "rm -f *.dcu tests/*.dcu tests/*.exe tests/*.identcache tests/*.local tests/TestsFromLibGit2/*.dcu "
 end
 
 task :binary do
