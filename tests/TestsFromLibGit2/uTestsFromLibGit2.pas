@@ -33,7 +33,7 @@ type
       function remove_placeholders(directory_path, filename: PAnsiChar): Integer;
       function RenameDir(const aFrom, aTo: AnsiString): Boolean;
       function p_unlink(const aFileName: String): Integer;
-      function p_rename(const aFrom, aTo: AnsiString): Integer;
+      function p_rename(const aFrom, aTo: AnsiString): Integer; virtual;
    end;
 
    TTestSuiteForLibGit2 = class(TTestSuite, ITestSuite, ITest)
@@ -450,8 +450,8 @@ end;
 
 function TTestFromLibGit2.p_rename(const aFrom, aTo: AnsiString): Integer;
 begin
-   RenameFile(aFrom, aTo);
-   if (not FileExists(aFrom)) and FileExists(aTo) then
+   RenameFile(String(aFrom), String(aTo));
+   if (not FileExists(String(aFrom))) and FileExists(String(aTo)) then
       Result := 0
    else
       Result := GIT_ERROR;

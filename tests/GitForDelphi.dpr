@@ -30,7 +30,9 @@ uses
   t10_refs in 'TestsFromLibGit2\t10_refs.pas',
   uGitForDelphi in '..\uGitForDelphi.pas',
   t15_config in 'TestsFromLibGit2\t15_config.pas',
-  t18_status in 'TestsFromLibGit2\t18_status.pas';
+  t18_status in 'TestsFromLibGit2\t18_status.pas',
+  status in 'TestsFromLibGit2\clar\status.pas',
+  uClar in 'TestsFromLibGit2\clar\uClar.pas';
 
 {$R *.RES}
 
