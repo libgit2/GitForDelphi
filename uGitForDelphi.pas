@@ -303,6 +303,9 @@ const
    GIT_PACKEDREFS_FILE: PAnsiChar = 'packed-refs';
    GIT_REFS_TAGS_DIR:   PAnsiChar = 'refs/tags/';
 
+   GIT_DIR_FETCH                    = 0;
+   GIT_DIR_PUSH                     = 1;
+
 type
    size_t   = LongWord;
    time_t   = Int64;

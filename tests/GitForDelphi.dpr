@@ -32,7 +32,8 @@ uses
   t15_config in 'TestsFromLibGit2\t15_config.pas',
   t18_status in 'TestsFromLibGit2\t18_status.pas',
   status in 'TestsFromLibGit2\clar\status.pas',
-  uClar in 'TestsFromLibGit2\clar\uClar.pas';
+  uClar in 'TestsFromLibGit2\clar\uClar.pas',
+  network in 'TestsFromLibGit2\clar\network.pas';
 
 {$R *.RES}
 
