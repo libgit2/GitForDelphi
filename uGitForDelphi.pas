@@ -1274,197 +1274,294 @@ begin
    Result := time_t__to__TDateTime(t, time_offset);
 end;
 
-function InitLibgit2: Boolean;
-   function Bind(const aName: AnsiString; aAllowNotFound: Boolean = false): Pointer;
+procedure BindFuncs(aBind: Boolean);
+   function Bind(const aName, aModifier: AnsiString; aAllowNotFound: Boolean = false): Pointer;
+   var
+      exported_name: AnsiString;
    begin
-      Result := GetProcAddress(libgit2, PAnsiChar(aName));
-      {$IFDEF DEBUG}
-      if (Result = nil) and (not aAllowNotFound) then
-         raise Exception.CreateFmt('Export [%s] not found', [aName]);
-      {$ENDIF}
+      if not aBind then
+         Result := nil
+      else
+      begin
+         if aModifier = '' then
+            exported_name := aName
+         else
+            exported_name := '_' + aName + '@' + aModifier;
+
+         Result := GetProcAddress(libgit2, PAnsiChar(exported_name));
+         {$IFDEF DEBUG}
+         if (Result = nil) and (not aAllowNotFound) then
+            raise Exception.CreateFmt('Export [%s] not found (as %s)', [aName, exported_name]);
+         {$ENDIF}
+      end;
    end;
 const
    OPTIONAL = true;
 begin
+   git_attr__true                   := Bind('git_attr__true', '');
+   git_attr__false                  := Bind('git_attr__false', '');
+
+   git_attr_get                     := Bind('git_attr_get', '16');
+   git_attr_get_many                := Bind('git_attr_get_many', '20');
+   git_attr_foreach                 := Bind('git_attr_foreach', '16');
+   git_attr_cache_flush             := Bind('git_attr_cache_flush', '4');
+   git_attr_add_macro               := Bind('git_attr_add_macro', '12');
+
+   git_blob_rawcontent              := Bind('git_blob_rawcontent', '4');
+   git_blob_rawsize                 := Bind('git_blob_rawsize', '4');
+   git_blob_create_fromfile         := Bind('git_blob_create_fromfile', '12');
+   git_blob_create_frombuffer       := Bind('git_blob_create_frombuffer', '16');
+
+   git_commit_id                    := Bind('git_commit_id', '4');
+   git_commit_message_encoding      := Bind('git_commit_message_encoding', '4');
+   git_commit_message               := Bind('git_commit_message', '4');
+   git_commit_time                  := Bind('git_commit_time', '4');
+   git_commit_time_offset           := Bind('git_commit_time_offset', '4');
+   git_commit_committer             := Bind('git_commit_committer', '4');
+   git_commit_author                := Bind('git_commit_author', '4');
+   git_commit_tree                  := Bind('git_commit_tree', '8');
+   git_commit_tree_oid              := Bind('git_commit_tree_oid', '4');
+   git_commit_parentcount           := Bind('git_commit_parentcount', '4');
+   git_commit_parent                := Bind('git_commit_parent', '12');
+   git_commit_parent_oid            := Bind('git_commit_parent_oid', '8');
+   git_commit_create                := Bind('git_commit_create', '40');
+   git_commit_create_v              := Bind('git_commit_create_v', '');
+
+   git_strarray_free                := Bind('git_strarray_free', '4');
+   git_libgit2_version              := Bind('git_libgit2_version', '12');
+
+   git_config_find_global           := Bind('git_config_find_global', '4');
+   git_config_find_system           := Bind('git_config_find_system', '4');
+   git_config_open_global           := Bind('git_config_open_global', '4');
+   git_config_file__ondisk          := Bind('git_config_file__ondisk', '8');
+   git_config_new                   := Bind('git_config_new', '4');
+   git_config_add_file              := Bind('git_config_add_file', '12');
+   git_config_add_file_ondisk       := Bind('git_config_add_file_ondisk', '12');
+   git_config_open_ondisk           := Bind('git_config_open_ondisk', '8');
+   git_config_free                  := Bind('git_config_free', '4');
+   git_config_get_int32             := Bind('git_config_get_int32', '12');
+   git_config_get_int64             := Bind('git_config_get_int64', '12');
+   git_config_get_bool              := Bind('git_config_get_bool', '12');
+   git_config_get_string            := Bind('git_config_get_string', '12');
+   git_config_set_int32             := Bind('git_config_set_int32', '12');
+   git_config_set_int64             := Bind('git_config_set_int64', '16');
+   git_config_set_bool              := Bind('git_config_set_bool', '12');
+   git_config_set_string            := Bind('git_config_set_string', '12');
+   git_config_delete                := Bind('git_config_delete', '8');
+   git_config_foreach               := Bind('git_config_foreach', '12');
+
+   git_lasterror                    := Bind('git_lasterror', '0');
+   git_strerror                     := Bind('git_strerror', '4');
+   git_clearerror                   := Bind('git_clearerror', '0');
+
+   git_index_open                   := Bind('git_index_open', '8');
+   git_index_clear                  := Bind('git_index_clear', '4');
+   git_index_free                   := Bind('git_index_free', '4');
+   git_index_read                   := Bind('git_index_read', '4');
+   git_index_write                  := Bind('git_index_write', '4');
+   git_index_find                   := Bind('git_index_find', '8');
+   git_index_uniq                   := Bind('git_index_uniq', '4');
+   git_index_add                    := Bind('git_index_add', '12');
+   git_index_add2                   := Bind('git_index_add2', '8');
+   git_index_append                 := Bind('git_index_append', '12');
+   git_index_append2                := Bind('git_index_append2', '8');
+   git_index_remove                 := Bind('git_index_remove', '8');
+   git_index_get                    := Bind('git_index_get', '8');
+   git_index_entrycount             := Bind('git_index_entrycount', '4');
+   git_index_entrycount_unmerged    := Bind('git_index_entrycount_unmerged', '4');
+   git_index_get_unmerged_bypath    := Bind('git_index_get_unmerged_bypath', '8');
+   git_index_get_unmerged_byindex   := Bind('git_index_get_unmerged_byindex', '8');
+   git_index_entry_stage            := Bind('git_index_entry_stage', '4');
+   git_index_read_tree              := Bind('git_index_read_tree', '8');
+
+   git_indexer_new                  := Bind('git_indexer_new', '8');
+   git_indexer_run                  := Bind('git_indexer_run', '8');
+   git_indexer_write                := Bind('git_indexer_write', '4');
+   git_indexer_hash                 := Bind('git_indexer_hash', '4');
+   git_indexer_free                 := Bind('git_indexer_free', '4');
+
+   git_object_lookup                := Bind('git_object_lookup', '16');
+   git_object_lookup_prefix         := Bind('git_object_lookup_prefix', '20');
+   git_object_id                    := Bind('git_object_id', '4');
+   git_object_type                  := Bind('git_object_type', '4');
+   git_object_owner                 := Bind('git_object_owner', '4');
+   git_object_free                  := Bind('git_object_free', '4');
+   git_object_type2string           := Bind('git_object_type2string', '4');
+   git_object_string2type           := Bind('git_object_string2type', '4');
+   git_object_typeisloose           := Bind('git_object_typeisloose', '4');
+   git_object__size                 := Bind('git_object__size', '4');
+
+   git_odb_new                      := Bind('git_odb_new', '4');
+   git_odb_open                     := Bind('git_odb_open', '8');
+   git_odb_add_backend              := Bind('git_odb_add_backend', '12');
+   git_odb_add_alternate            := Bind('git_odb_add_alternate', '12');
+   git_odb_free                     := Bind('git_odb_free', '4');
+   git_odb_read                     := Bind('git_odb_read', '12');
+   git_odb_read_prefix              := Bind('git_odb_read_prefix', '16');
+   git_odb_read_header              := Bind('git_odb_read_header', '16');
+   git_odb_exists                   := Bind('git_odb_exists', '8');
+   git_odb_write                    := Bind('git_odb_write', '20');
+   git_odb_open_wstream             := Bind('git_odb_open_wstream', '16');
+   git_odb_open_rstream             := Bind('git_odb_open_rstream', '12');
+   git_odb_hash                     := Bind('git_odb_hash', '16');
+   git_odb_hashfile                 := Bind('git_odb_hashfile', '12');
+   git_odb_object_free              := Bind('git_odb_object_free', '4');
+   git_odb_object_id                := Bind('git_odb_object_id', '4');
+   git_odb_object_data              := Bind('git_odb_object_data', '4');
+   git_odb_object_size              := Bind('git_odb_object_size', '4');
+   git_odb_object_type              := Bind('git_odb_object_type', '4');
+
+   git_odb_backend_pack             := Bind('git_odb_backend_pack', '8');
+   git_odb_backend_loose            := Bind('git_odb_backend_loose', '16');
+
+   git_oid_fromstr                  := Bind('git_oid_fromstr', '8');
+   git_oid_fromstrn                 := Bind('git_oid_fromstrn', '12');
+   git_oid_fromraw                  := Bind('git_oid_fromraw', '8');
+   git_oid_fmt                      := Bind('git_oid_fmt', '8');
+   git_oid_pathfmt                  := Bind('git_oid_pathfmt', '8');
+   git_oid_allocfmt                 := Bind('git_oid_allocfmt', '4');
+   git_oid_to_string                := Bind('git_oid_to_string', '12');
+   git_oid_cpy                      := Bind('git_oid_cpy', '8');
+   git_oid_cmp                      := Bind('git_oid_cmp', '8');
+   git_oid_ncmp                     := Bind('git_oid_ncmp', '12');
+   git_oid_streq                    := Bind('git_oid_streq', '8');
+
+   git_reflog_read                  := Bind('git_reflog_read', '8');
+   git_reflog_write                 := Bind('git_reflog_write', '16');
+   git_reflog_rename                := Bind('git_reflog_rename', '8');
+   git_reflog_delete                := Bind('git_reflog_delete', '4');
+   git_reflog_entrycount            := Bind('git_reflog_entrycount', '4');
+   git_reflog_entry_byindex         := Bind('git_reflog_entry_byindex', '8');
+   git_reflog_entry_oidold          := Bind('git_reflog_entry_oidold', '4');
+   git_reflog_entry_oidnew          := Bind('git_reflog_entry_oidnew', '4');
+   git_reflog_entry_committer       := Bind('git_reflog_entry_committer', '4');
+   git_reflog_entry_msg             := Bind('git_reflog_entry_msg', '4');
+   git_reflog_free                  := Bind('git_reflog_free', '4');
+
+   git_reference_lookup             := Bind('git_reference_lookup', '12');
+   git_reference_create_symbolic    := Bind('git_reference_create_symbolic', '20');
+   git_reference_create_oid         := Bind('git_reference_create_oid', '20');
+   git_reference_oid                := Bind('git_reference_oid', '4');
+   git_reference_target             := Bind('git_reference_target', '4');
+   git_reference_type               := Bind('git_reference_type', '4');
+   git_reference_name               := Bind('git_reference_name', '4');
+   git_reference_resolve            := Bind('git_reference_resolve', '8');
+   git_reference_owner              := Bind('git_reference_owner', '4');
+   git_reference_set_target         := Bind('git_reference_set_target', '8');
+   git_reference_set_oid            := Bind('git_reference_set_oid', '8');
+   git_reference_rename             := Bind('git_reference_rename', '12');
+   git_reference_delete             := Bind('git_reference_delete', '4');
+   git_reference_packall            := Bind('git_reference_packall', '4');
+   git_reference_listall            := Bind('git_reference_listall', '12');
+   git_reference_foreach            := Bind('git_reference_foreach', '16');
+   git_reference_is_packed          := Bind('git_reference_is_packed', '4');
+   git_reference_reload             := Bind('git_reference_reload', '4');
+   git_reference_free               := Bind('git_reference_free', '4');
+
+   git_remote_new                   := Bind('git_remote_new', '16');
+   git_remote_load                  := Bind('git_remote_load', '12');
+   git_remote_name                  := Bind('git_remote_name', '4');
+   git_remote_url                   := Bind('git_remote_url', '4');
+   git_remote_fetchspec             := Bind('git_remote_fetchspec', '4');
+   git_remote_pushspec              := Bind('git_remote_pushspec', '4');
+   git_remote_connect               := Bind('git_remote_connect', '8');
+   git_remote_ls                    := Bind('git_remote_ls', '12');
+   git_remote_download              := Bind('git_remote_download', '8');
+   git_remote_connected             := Bind('git_remote_connected', '4');
+   git_remote_disconnect            := Bind('git_remote_disconnect', '4');
+   git_remote_free                  := Bind('git_remote_free', '4');
+   git_remote_update_tips           := Bind('git_remote_update_tips', '4');
+   git_remote_valid_url             := Bind('git_remote_valid_url', '4');
+
+   git_repository_open              := Bind('git_repository_open', '8');
+   git_repository_discover          := Bind('git_repository_discover', '20');
+   git_repository_free              := Bind('git_repository_free', '4');
+   git_repository_init              := Bind('git_repository_init', '12');
+   git_repository_head              := Bind('git_repository_head', '8');
+   git_repository_head_detached     := Bind('git_repository_head_detached', '4');
+   git_repository_head_orphan       := Bind('git_repository_head_orphan', '4');
+   git_repository_is_empty          := Bind('git_repository_is_empty', '4');
+   git_repository_path              := Bind('git_repository_path', '4');
+   git_repository_workdir           := Bind('git_repository_workdir', '4');
+   git_repository_set_workdir       := Bind('git_repository_set_workdir', '8');
+   git_repository_is_bare           := Bind('git_repository_is_bare', '4');
+   git_repository_config            := Bind('git_repository_config', '8');
+   git_repository_set_config        := Bind('git_repository_set_config', '8');
+   git_repository_odb               := Bind('git_repository_odb', '8');
+   git_repository_set_odb           := Bind('git_repository_set_odb', '8');
+   git_repository_index             := Bind('git_repository_index', '8');
+   git_repository_set_index         := Bind('git_repository_set_index', '8');
+
+   git_revwalk_new                  := Bind('git_revwalk_new', '8');
+   git_revwalk_reset                := Bind('git_revwalk_reset', '4');
+   git_revwalk_push                 := Bind('git_revwalk_push', '8');
+   git_revwalk_hide                 := Bind('git_revwalk_hide', '8');
+   git_revwalk_next                 := Bind('git_revwalk_next', '8');
+   git_revwalk_sorting              := Bind('git_revwalk_sorting', '8');
+   git_revwalk_free                 := Bind('git_revwalk_free', '4');
+   git_revwalk_repository           := Bind('git_revwalk_repository', '4');
+
+   git_signature_new                := Bind('git_signature_new', '24');
+   git_signature_now                := Bind('git_signature_now', '12');
+   git_signature_dup                := Bind('git_signature_dup', '4');
+   git_signature_free               := Bind('git_signature_free', '4');
+
+   git_status_foreach               := Bind('git_status_foreach', '12');
+   git_status_file                  := Bind('git_status_file', '12');
+   git_status_should_ignore         := Bind('git_status_should_ignore', '12');
+
+   git_tag_id                       := Bind('git_tag_id', '4');
+   git_tag_target                   := Bind('git_tag_target', '8');
+   git_tag_target_oid               := Bind('git_tag_target_oid', '4');
+   git_tag_type                     := Bind('git_tag_type', '4');
+   git_tag_name                     := Bind('git_tag_name', '4');
+   git_tag_tagger                   := Bind('git_tag_tagger', '4');
+   git_tag_message                  := Bind('git_tag_message', '4');
+   git_tag_create                   := Bind('git_tag_create', '28');
+   git_tag_create_frombuffer        := Bind('git_tag_create_frombuffer', '16');
+   git_tag_create_lightweight       := Bind('git_tag_create_lightweight', '20');
+   git_tag_delete                   := Bind('git_tag_delete', '8');
+   git_tag_list                     := Bind('git_tag_list', '8');
+   git_tag_list_match               := Bind('git_tag_list_match', '12');
+
+   git_threads_init                 := Bind('git_threads_init', '0');
+   git_threads_shutdown             := Bind('git_threads_shutdown', '0');
+
+   git_tree_id                      := Bind('git_tree_id', '4');
+   git_tree_entrycount              := Bind('git_tree_entrycount', '4');
+   git_tree_entry_byname            := Bind('git_tree_entry_byname', '8');
+   git_tree_entry_byindex           := Bind('git_tree_entry_byindex', '8');
+   git_tree_entry_attributes        := Bind('git_tree_entry_attributes', '4');
+   git_tree_entry_name              := Bind('git_tree_entry_name', '4');
+   git_tree_entry_id                := Bind('git_tree_entry_id', '4');
+   git_tree_entry_type              := Bind('git_tree_entry_type', '4');
+   git_tree_entry_2object           := Bind('git_tree_entry_2object', '12');
+   git_tree_create_fromindex        := Bind('git_tree_create_fromindex', '8');
+
+   git_treebuilder_create           := Bind('git_treebuilder_create', '8');
+   git_treebuilder_clear            := Bind('git_treebuilder_clear', '4');
+   git_treebuilder_free             := Bind('git_treebuilder_free', '4');
+   git_treebuilder_get              := Bind('git_treebuilder_get', '8');
+   git_treebuilder_insert           := Bind('git_treebuilder_insert', '20');
+   git_treebuilder_remove           := Bind('git_treebuilder_remove', '8');
+   git_treebuilder_filter           := Bind('git_treebuilder_filter', '12');
+   git_treebuilder_write            := Bind('git_treebuilder_write', '12');
+   git_tree_get_subtree             := Bind('git_tree_get_subtree', '12');
+   git_tree_walk                    := Bind('git_tree_walk', '16');
+
+   // TODO : not exported?
+//   gitwin_set_codepage              := Bind('gitwin_set_codepage', '');
+//   gitwin_get_codepage              := Bind('gitwin_get_codepage', '');
+//   gitwin_set_utf8                  := Bind('gitwin_set_utf8', '');
+end;
+
+function InitLibgit2: Boolean;
+begin
   if libgit2 = 0 then
   begin
-    if FileExists('git2-0.dll') then
-       libgit2 := LoadLibrary('git2-0.dll')
-    else
-       libgit2 := LoadLibrary('git2.dll');
+    libgit2 := LoadLibrary('git2.dll');
     if libgit2 > 0 then
-    begin
-      git_libgit2_version                       := Bind('git_libgit2_version');
-      git_object__size                          := Bind('git_object__size');
-      git_strerror                              := Bind('git_strerror');
-      git_lasterror                             := Bind('git_lasterror');
-
-      git_blob_rawcontent                       := Bind('git_blob_rawcontent');
-      git_blob_rawsize                          := Bind('git_blob_rawsize');
-      git_blob_create_fromfile                  := Bind('git_blob_create_fromfile');
-      git_blob_create_frombuffer                := Bind('git_blob_create_frombuffer');
-
-      git_commit_message                        := Bind('git_commit_message');
-      git_commit_author                         := Bind('git_commit_author');
-      git_commit_committer                      := Bind('git_commit_committer');
-      git_commit_time                           := Bind('git_commit_time');
-      git_commit_parentcount                    := Bind('git_commit_parentcount');
-      git_commit_parent                         := Bind('git_commit_parent');
-      git_commit_id                             := Bind('git_commit_id');
-      git_commit_time_offset                    := Bind('git_commit_time_offset');
-      git_commit_tree                           := Bind('git_commit_tree');
-      git_commit_create                         := Bind('git_commit_create');
-      git_commit_create_v                       := Bind('git_commit_create_ov');
-      git_commit_parent_oid                     := Bind('git_commit_parent_oid');
-      git_commit_tree_oid                       := Bind('git_commit_tree_oid');
-
-      git_config_find_global                    := Bind('git_config_find_global');
-      git_config_open_global                    := Bind('git_config_open_global');
-      git_config_file__ondisk                   := Bind('git_config_file__ondisk');
-      git_config_new                            := Bind('git_config_new');
-      git_config_add_file                       := Bind('git_config_add_file');
-      git_config_add_file_ondisk                := Bind('git_config_add_file_ondisk');
-      git_config_open_ondisk                    := Bind('git_config_open_ondisk');
-      git_config_free                           := Bind('git_config_free');
-      git_config_get_bool                       := Bind('git_config_get_bool');
-      git_config_get_string                     := Bind('git_config_get_string');
-      git_config_set_bool                       := Bind('git_config_set_bool');
-      git_config_set_string                     := Bind('git_config_set_string');
-      git_config_foreach                        := Bind('git_config_foreach');
-
-      git_index_open                            := Bind('git_index_open');
-      git_index_read                            := Bind('git_index_read');
-      git_index_free                            := Bind('git_index_free');
-      git_index_find                            := Bind('git_index_find');
-      git_index_entrycount                      := Bind('git_index_entrycount');
-      git_index_add2                            := Bind('git_index_add2');
-      git_index_append                          := Bind('git_index_append');
-      git_index_append2                         := Bind('git_index_append2');
-      git_index_clear                           := Bind('git_index_clear');
-      git_index_write                           := Bind('git_index_write');
-      git_index_add                             := Bind('git_index_add');
-      git_index_remove                          := Bind('git_index_remove');
-      git_index_get                             := Bind('git_index_get');
-      git_index_entrycount_unmerged             := Bind('git_index_entrycount_unmerged');
-      git_index_get_unmerged_bypath             := Bind('git_index_get_unmerged_bypath');
-      git_index_get_unmerged_byindex            := Bind('git_index_get_unmerged_byindex');
-      git_index_entry_stage                     := Bind('git_index_entry_stage');
-
-      git_object_id                             := Bind('git_object_id');
-      git_object_type                           := Bind('git_object_type');
-      git_object_owner                          := Bind('git_object_owner');
-      git_object_type2string                    := Bind('git_object_type2string');
-      git_object_string2type                    := Bind('git_object_string2type');
-      git_object_typeisloose                    := Bind('git_object_typeisloose');
-      git_object_lookup                         := Bind('git_object_lookup');
-      git_object_lookup_prefix                  := Bind('git_object_lookup_prefix');
-
-      git_odb_new                               := Bind('git_odb_new');
-      git_odb_open                              := Bind('git_odb_open');
-      git_odb_open_wstream                      := Bind('git_odb_open_wstream');
-      git_odb_open_rstream                      := Bind('git_odb_open_rstream');
-      git_odb_write                             := Bind('git_odb_write');
-      git_odb_add_backend                       := Bind('git_odb_add_backend');
-      git_odb_add_alternate                     := Bind('git_odb_add_alternate');
-      git_odb_read                              := Bind('git_odb_read');
-      git_odb_read_prefix                       := Bind('git_odb_read_prefix');
-      git_odb_read_header                       := Bind('git_odb_read_header');
-      git_odb_exists                            := Bind('git_odb_exists');
-      git_odb_hash                              := Bind('git_odb_hash');
-
-      git_odb_backend_pack                      := Bind('git_odb_backend_pack');
-      git_odb_backend_loose                     := Bind('git_odb_backend_loose');
-
-      git_odb_object_data                       := Bind('git_odb_object_data');
-      git_odb_object_id                         := Bind('git_odb_object_id');
-      git_odb_object_size                       := Bind('git_odb_object_size');
-      git_odb_object_type                       := Bind('git_odb_object_type');
-
-      git_oid_fromstr                           := Bind('git_oid_fromstr');
-      git_oid_fmt                               := Bind('git_oid_fmt');
-      git_oid_pathfmt                           := Bind('git_oid_pathfmt');
-      git_oid_fromraw                           := Bind('git_oid_fromraw');
-      git_oid_allocfmt                          := Bind('git_oid_allocfmt');
-      git_oid_to_string                         := Bind('git_oid_to_string');
-      git_oid_cpy                               := Bind('git_oid_cpy');
-      git_oid_cmp                               := Bind('git_oid_cmp');
-      git_oid_ncmp                              := Bind('git_oid_ncmp');
-
-      git_reference_create_oid                  := Bind('git_reference_create_oid');
-      git_reference_oid                         := Bind('git_reference_oid');
-      git_reference_target                      := Bind('git_reference_target');
-      git_reference_type                        := Bind('git_reference_type');
-      git_reference_name                        := Bind('git_reference_name');
-      git_reference_resolve                     := Bind('git_reference_resolve');
-      git_reference_owner                       := Bind('git_reference_owner');
-      git_reference_rename                      := Bind('git_reference_rename');
-      git_reference_set_target                  := Bind('git_reference_set_target');
-      git_reference_set_oid                     := Bind('git_reference_set_oid');
-      git_reference_lookup                      := Bind('git_reference_lookup');
-      git_reference_create_symbolic             := Bind('git_reference_create_symbolic');
-      git_reference_delete                      := Bind('git_reference_delete');
-      git_reference_packall                     := Bind('git_reference_packall');
-      git_reference_listall                     := Bind('git_reference_listall');
-      git_reference_foreach                     := Bind('git_reference_foreach');
-      git_strarray_free                         := Bind('git_strarray_free');
-
-      git_repository_open                       := Bind('git_repository_open');
-      git_repository_free                       := Bind('git_repository_free');
-      git_repository_index                      := Bind('git_repository_index');
-      git_repository_init                       := Bind('git_repository_init');
-      git_repository_is_empty                   := Bind('git_repository_is_empty');
-      git_repository_path                       := Bind('git_repository_path');
-      git_repository_is_bare                    := Bind('git_repository_is_bare');
-      git_repository_discover                   := Bind('git_repository_discover');
-      git_repository_config                     := Bind('git_repository_config');
-
-      git_revwalk_new                           := Bind('git_revwalk_new');
-      git_revwalk_free                          := Bind('git_revwalk_free');
-      git_revwalk_sorting                       := Bind('git_revwalk_sorting');
-      git_revwalk_push                          := Bind('git_revwalk_push');
-      git_revwalk_next                          := Bind('git_revwalk_next');
-      git_revwalk_reset                         := Bind('git_revwalk_reset');
-      git_revwalk_hide                          := Bind('git_revwalk_hide');
-      git_revwalk_repository                    := Bind('git_revwalk_repository');
-
-      git_signature_new                         := Bind('git_signature_new');
-      git_signature_dup                         := Bind('git_signature_dup');
-      git_signature_free                        := Bind('git_signature_free');
-      git_signature_now                         := Bind('git_signature_now');
-
-      git_tag_name                              := Bind('git_tag_name');
-      git_tag_type                              := Bind('git_tag_type');
-      git_tag_target                            := Bind('git_tag_target');
-      git_tag_target_oid                        := Bind('git_tag_target_oid');
-      git_tag_id                                := Bind('git_tag_id');
-      git_tag_tagger                            := Bind('git_tag_tagger');
-      git_tag_message                           := Bind('git_tag_message');
-      git_tag_create                            := Bind('git_tag_create');
-      git_tag_list                              := Bind('git_tag_list');
-      git_tag_create_frombuffer                 := Bind('git_tag_create_frombuffer');
-      git_tag_delete                            := Bind('git_tag_delete');
-
-      git_tree_entry_byname                     := Bind('git_tree_entry_byname');
-      git_tree_entry_byindex                    := Bind('git_tree_entry_byindex');
-      git_tree_entrycount                       := Bind('git_tree_entrycount');
-      git_tree_entry_name                       := Bind('git_tree_entry_name');
-      git_tree_entry_2object                    := Bind('git_tree_entry_2object');
-      git_tree_id                               := Bind('git_tree_id');
-      git_tree_create_fromindex                 := Bind('git_tree_create_fromindex');
-
-      git_tree_entry_attributes                 := Bind('git_tree_entry_attributes');
-      git_tree_entry_id                         := Bind('git_tree_entry_id');
-      git_tree_entry_type                       := Bind('git_tree_entry_type');
-
-      git_treebuilder_create                    := Bind('git_treebuilder_create');
-      git_treebuilder_clear                     := Bind('git_treebuilder_clear');
-      git_treebuilder_free                      := Bind('git_treebuilder_free');
-      git_treebuilder_get                       := Bind('git_treebuilder_get');
-      git_treebuilder_insert                    := Bind('git_treebuilder_insert');
-      git_treebuilder_remove                    := Bind('git_treebuilder_remove');
-      git_treebuilder_filter                    := Bind('git_treebuilder_filter');
-      git_treebuilder_write                     := Bind('git_treebuilder_write');
-    end;
+      BindFuncs(true);
   end;
 
   Result := libgit2 > 0;
@@ -1477,177 +1574,7 @@ begin
     FreeLibrary(libgit2);
     libgit2 := 0;
 
-    git_libgit2_version                       := nil;
-
-    git_object__size                          := nil;
-    git_strerror                              := nil;
-    git_lasterror                             := nil;
-
-    git_blob_rawcontent                       := nil;
-    git_blob_rawsize                          := nil;
-    git_blob_create_fromfile                  := nil;
-    git_blob_create_frombuffer                := nil;
-
-    git_commit_message                        := nil;
-    git_commit_author                         := nil;
-    git_commit_committer                      := nil;
-    git_commit_time                           := nil;
-    git_commit_parentcount                    := nil;
-    git_commit_parent                         := nil;
-    git_commit_id                             := nil;
-    git_commit_time_offset                    := nil;
-    git_commit_tree                           := nil;
-    git_commit_create                         := nil;
-    git_commit_create_v                       := nil;
-    git_commit_parent_oid                     := nil;
-    git_commit_tree_oid                       := nil;
-
-    git_config_find_global                    := nil;
-    git_config_open_global                    := nil;
-    git_config_file__ondisk                   := nil;
-    git_config_new                            := nil;
-    git_config_add_file                       := nil;
-    git_config_add_file_ondisk                := nil;
-    git_config_open_ondisk                    := nil;
-    git_config_free                           := nil;
-    git_config_get_bool                       := nil;
-    git_config_get_string                     := nil;
-    git_config_set_bool                       := nil;
-    git_config_set_string                     := nil;
-    git_config_foreach                        := nil;
-
-    git_index_open                            := nil;
-    git_index_read                            := nil;
-    git_index_free                            := nil;
-    git_index_find                            := nil;
-    git_index_entrycount                      := nil;
-    git_index_add2                            := nil;
-    git_index_append                          := nil;
-    git_index_append2                         := nil;
-    git_index_clear                           := nil;
-    git_index_write                           := nil;
-    git_index_add                             := nil;
-    git_index_remove                          := nil;
-    git_index_get                             := nil;
-    git_index_entrycount_unmerged             := nil;
-    git_index_get_unmerged_bypath             := nil;
-    git_index_get_unmerged_byindex            := nil;
-    git_index_entry_stage                     := nil;
-
-    git_object_id                             := nil;
-    git_object_type                           := nil;
-    git_object_owner                          := nil;
-    git_object_type2string                    := nil;
-    git_object_string2type                    := nil;
-    git_object_typeisloose                    := nil;
-    git_object_lookup                         := nil;
-    git_object_lookup_prefix                  := nil;
-
-    git_odb_new                               := nil;
-    git_odb_open                              := nil;
-    git_odb_open_wstream                      := nil;
-    git_odb_open_rstream                      := nil;
-    git_odb_write                             := nil;
-    git_odb_add_backend                       := nil;
-    git_odb_add_alternate                     := nil;
-    git_odb_read                              := nil;
-    git_odb_read_prefix                       := nil;
-    git_odb_read_header                       := nil;
-    git_odb_exists                            := nil;
-    git_odb_hash                              := nil;
-
-    git_odb_backend_pack                      := nil;
-    git_odb_backend_loose                     := nil;
-
-    git_odb_object_data                       := nil;
-    git_odb_object_id                         := nil;
-    git_odb_object_size                       := nil;
-    git_odb_object_type                       := nil;
-
-    git_oid_fromstr                           := nil;
-    git_oid_fmt                               := nil;
-    git_oid_pathfmt                           := nil;
-    git_oid_fromraw                           := nil;
-    git_oid_allocfmt                          := nil;
-    git_oid_to_string                         := nil;
-    git_oid_cpy                               := nil;
-    git_oid_cmp                               := nil;
-    git_oid_ncmp                              := nil;
-
-    git_reference_create_oid                  := nil;
-    git_reference_oid                         := nil;
-    git_reference_target                      := nil;
-    git_reference_type                        := nil;
-    git_reference_name                        := nil;
-    git_reference_resolve                     := nil;
-    git_reference_owner                       := nil;
-    git_reference_rename                      := nil;
-    git_reference_set_target                  := nil;
-    git_reference_set_oid                     := nil;
-    git_reference_lookup                      := nil;
-    git_reference_create_symbolic             := nil;
-    git_reference_delete                      := nil;
-    git_reference_packall                     := nil;
-    git_reference_listall                     := nil;
-    git_reference_foreach                     := nil;
-    git_strarray_free                         := nil;
-
-    git_repository_open                       := nil;
-    git_repository_free                       := nil;
-    git_repository_index                      := nil;
-    git_repository_init                       := nil;
-    git_repository_is_empty                   := nil;
-    git_repository_path                       := nil;
-    git_repository_is_bare                    := nil;
-    git_repository_discover                   := nil;
-    git_repository_config                     := nil;
-
-    git_revwalk_new                           := nil;
-    git_revwalk_free                          := nil;
-    git_revwalk_sorting                       := nil;
-    git_revwalk_push                          := nil;
-    git_revwalk_next                          := nil;
-    git_revwalk_reset                         := nil;
-    git_revwalk_hide                          := nil;
-    git_revwalk_repository                    := nil;
-
-    git_signature_new                         := nil;
-    git_signature_dup                         := nil;
-    git_signature_free                        := nil;
-    git_signature_now                         := nil;
-
-    git_tag_name                              := nil;
-    git_tag_type                              := nil;
-    git_tag_target                            := nil;
-    git_tag_target_oid                        := nil;
-    git_tag_id                                := nil;
-    git_tag_tagger                            := nil;
-    git_tag_message                           := nil;
-    git_tag_create                            := nil;
-    git_tag_list                              := nil;
-    git_tag_create_frombuffer                 := nil;
-    git_tag_delete                            := nil;
-
-    git_tree_entry_byname                     := nil;
-    git_tree_entry_byindex                    := nil;
-    git_tree_entrycount                       := nil;
-    git_tree_entry_name                       := nil;
-    git_tree_entry_2object                    := nil;
-    git_tree_id                               := nil;
-    git_tree_create_fromindex                 := nil;
-
-    git_tree_entry_attributes                 := nil;
-    git_tree_entry_id                         := nil;
-    git_tree_entry_type                       := nil;
-
-    git_treebuilder_create                    := nil;
-    git_treebuilder_clear                     := nil;
-    git_treebuilder_free                      := nil;
-    git_treebuilder_get                       := nil;
-    git_treebuilder_insert                    := nil;
-    git_treebuilder_remove                    := nil;
-    git_treebuilder_filter                    := nil;
-    git_treebuilder_write                     := nil;
+    BindFuncs(false);
   end;
 end;
 
