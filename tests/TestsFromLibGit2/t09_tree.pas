@@ -42,7 +42,7 @@ begin
    must_be_true(git_tree_entry_byindex(tree, 3) = nil);
    must_be_true(git_tree_entry_byindex(tree, Uint(-1)) = nil);
 
-   git_tree_close(tree);
+   git_tree_free(tree);
    git_repository_free(repo);
 end;
 
@@ -63,9 +63,11 @@ begin
    must_be_true(git_tree_entrycount(tree) = 3);
 
    must_be_true(git_object_lookup(obj, repo, @id, GIT_OBJ_TREE) = 0);
-   git_object_close(obj);
+   must_be_true(obj <> nil);
+   git_object_free(obj);
+   obj := nil;
    must_be_true(git_object_lookup(obj, repo, @id, GIT_OBJ_BLOB) = GIT_EINVALIDTYPE);
-   git_object_close(obj);
+   must_be_true(obj = nil);
 
    entry := git_tree_entry_byname(tree, 'README');
    must_be_true(entry <> nil);
@@ -73,9 +75,10 @@ begin
    must_be_true(StrComp(git_tree_entry_name(entry), 'README') = 0);
 
    must_pass(git_tree_entry_2object(obj, repo, entry));
+   must_be_true(obj <> nil);
 
-   git_object_close(obj);
-   git_tree_close(tree);
+   git_object_free(obj);
+   git_tree_free(tree);
    git_repository_free(repo);
 end;
 
@@ -111,7 +114,7 @@ begin
       must_be_true(git_oid_cmp(@rid, @id2) = 0);
 
       git_treebuilder_free(builder);
-      git_tree_close(tree);
+      git_tree_free(tree);
    finally
       close_temp_repo(repo);
    end;
@@ -147,14 +150,14 @@ begin
       must_pass(git_treebuilder_insert(unused, builder, 'new', @subtree_id, OctalToInt('040000')));
       must_pass(git_treebuilder_write(@id_hiearar, repo, builder));
       git_treebuilder_free(builder);
-      git_tree_close(tree);
+      git_tree_free(tree);
 
       must_be_true(git_oid_cmp(@id_hiearar, @id3) = 0);
 
       // check data is correct
       must_pass(git_tree_lookup(tree, repo, @id_hiearar));
       must_be_true(2 = git_tree_entrycount(tree));
-      git_tree_close(tree);
+      git_tree_free(tree);
    finally
       close_temp_repo(repo);
    end;

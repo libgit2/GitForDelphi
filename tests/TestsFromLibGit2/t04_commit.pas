@@ -22,13 +22,14 @@ type
 implementation
 
 const
-   commit_ids: array[0..5] of AnsiString = (
+   commit_ids: array[0..6] of AnsiString = (
       'a4a7dce85cf63874e984719f4fdd239f5145052f', { 0 }
       '9fd738e8f7967c078dceed8190330fc8648ee56a', { 1 }
       '4a202b346bb0fb0db7eff3cffeb3c70babbd2045', { 2 }
       'c47800c7266a2be04c571c04d5a6614691ea99bd', { 3 }
       '8496071c1b46c854b31185ea97743be6a8774479', { 4 }
-      '5b5b025afb0b4c913b4c338a42934a3863bf3644'  { 5 }
+      '5b5b025afb0b4c913b4c338a42934a3863bf3644', { 5 }
+      'a65fedf39aefe402d3bb6e24df4d4f5fe4547750'  { 6 }
    );
 
 { Test04_commit_details }
@@ -56,7 +57,6 @@ begin
       must_pass(git_commit_lookup(commit, repo, @id));
 
       message_       := git_commit_message(commit);
-      message_short  := git_commit_message_short(commit);
       author         := git_commit_author(commit);
       committer      := git_commit_committer(commit);
       commit_time    := git_commit_time(commit);
@@ -75,7 +75,7 @@ begin
       while p < parents do
       begin
          if Assigned(old_parent) then
-            git_commit_close(old_parent);
+            git_commit_free(old_parent);
 
          old_parent := parent;
 
@@ -84,8 +84,11 @@ begin
          CheckTrue(git_commit_author(parent) <> nil, 'git_commit_author(parent) <> nil'); // is it really a commit?
          Inc(p);
       end;
+      git_commit_free(old_parent);
+      git_commit_free(parent);
+
       must_fail(git_commit_parent(parent, commit, parents));
-      git_commit_close(commit);
+      git_commit_free(commit);
    end;
 
    git_repository_free(repo);
@@ -107,19 +110,21 @@ var
    commit: Pgit_commit;
    tree_id, parent_id, commit_id: git_oid;
    author, committer: Pgit_signature;
-   //* char hex_oid[41]; */
+   author1, committer1: Pgit_signature;
+   parent: Pgit_commit;
+   tree: Pgit_tree;
 begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
    git_oid_fromstr(@tree_id, tree_oid);
+   must_pass(git_tree_lookup(tree, repo, @tree_id));
+
    git_oid_fromstr(@parent_id, PAnsiChar(commit_ids[4]));
+   must_pass(git_commit_lookup(parent, repo, @parent_id));
 
    //* create signatures */
-   committer := git_signature_new(COMMITTER_NAME, COMMITTER_EMAIL, 123456789, 60);
-   must_be_true(committer <> nil);
-
-   author := git_signature_new(COMMITTER_NAME, COMMITTER_EMAIL, 987654321, 90);
-   must_be_true(author <> nil);
+   must_pass(git_signature_new(committer, COMMITTER_NAME, COMMITTER_EMAIL, 123456789, 60));
+   must_pass(git_signature_new(author, COMMITTER_NAME, COMMITTER_EMAIL, 987654321, 90));
 
    must_pass(git_commit_create_v(
       @commit_id, //* out id */
@@ -127,35 +132,39 @@ begin
       nil, //* do not update the HEAD */
       author,
       committer,
+      nil,
       COMMIT_MESSAGE,
-      @tree_id,
-      1, @parent_id));
+      tree,
+      1, parent));
 
-   git_signature_free(Pgit_signature(committer));
-   git_signature_free(Pgit_signature(author));
+   git_object_free(parent);
+   git_object_free(tree);
+
+   git_signature_free(committer);
+   git_signature_free(author);
 
    must_pass(git_commit_lookup(commit, repo, @commit_id));
 
    //* Check attributes were set correctly */
-   author := git_commit_author(commit);
-   must_be_true(author <> nil);
-   must_be_true(StrComp(author.name, COMMITTER_NAME) = 0);
-   must_be_true(StrComp(author.email, COMMITTER_EMAIL) = 0);
-   must_be_true(author.when.time = 987654321);
-   must_be_true(author.when.offset = 90);
+   author1 := git_commit_author(commit);
+   must_be_true(author1 <> nil);
+   must_be_true(StrComp(author1.name, COMMITTER_NAME) = 0);
+   must_be_true(StrComp(author1.email, COMMITTER_EMAIL) = 0);
+   must_be_true(author1.when.time = 987654321);
+   must_be_true(author1.when.offset = 90);
 
-   committer := git_commit_committer(commit);
-   must_be_true(committer <> nil);
-   must_be_true(StrComp(committer.name, COMMITTER_NAME) = 0);
-   must_be_true(StrComp(committer.email, COMMITTER_EMAIL) = 0);
-   must_be_true(committer.when.time = 123456789);
-   must_be_true(committer.when.offset = 60);
+   committer1 := git_commit_committer(commit);
+   must_be_true(committer1 <> nil);
+   must_be_true(StrComp(committer1.name, COMMITTER_NAME) = 0);
+   must_be_true(StrComp(committer1.email, COMMITTER_EMAIL) = 0);
+   must_be_true(committer1.when.time = 123456789);
+   must_be_true(committer1.when.offset = 60);
 
    must_be_true(StrComp(git_commit_message(commit), COMMIT_MESSAGE) = 0);
 
    must_pass(remove_loose_object(REPOSITORY_FOLDER, Pgit_object(commit)));
 
-   git_commit_close(commit);
+   git_commit_free(commit);
    git_repository_free(repo);
 end;
 
@@ -175,19 +184,19 @@ var
    author, committer: Pgit_signature;
    head, branch: Pgit_reference;
    head_old: AnsiString;
+   tree: Pgit_tree;
 const
    branch_name: PAnsiChar = 'refs/heads/root-commit-branch';
 begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
    git_oid_fromstr(@tree_id, tree_oid);
+   must_pass(git_tree_lookup(tree, repo, @tree_id));
 
    //* create signatures */
-   committer := git_signature_new(COMMITTER_NAME, COMMITTER_EMAIL, 123456789, 60);
-   must_be_true(committer <> nil);
+   must_pass(git_signature_new(committer, COMMITTER_NAME, COMMITTER_EMAIL, 123456789, 60));
 
-   author := git_signature_new(COMMITTER_NAME, COMMITTER_EMAIL, 987654321, 90);
-   must_be_true(author <> nil);
+   must_pass(git_signature_new(author, COMMITTER_NAME, COMMITTER_EMAIL, 987654321, 90));
 
    //* First we need to update HEAD so it points to our non-existant branch */
    must_pass(git_reference_lookup(head, repo, 'HEAD'));
@@ -203,10 +212,12 @@ begin
       'HEAD',
       author,
       committer,
+      nil,
       ROOT_COMMIT_MESSAGE,
-      @tree_id,
+      tree,
       0));
 
+   git_object_free(tree);
    git_signature_free(Pgit_signature(committer));
    git_signature_free(Pgit_signature(author));
 
@@ -223,13 +234,16 @@ begin
    must_be_true(StrComp(git_commit_message(commit), ROOT_COMMIT_MESSAGE) = 0);
 
    //* Remove the data we just added to the repo */
+   git_reference_free(head);
    must_pass(git_reference_lookup(head, repo, 'HEAD'));
    must_pass(git_reference_set_target(head, PAnsiChar(head_old)));
    must_pass(git_reference_delete(branch));
    must_pass(remove_loose_object(REPOSITORY_FOLDER, Pgit_object(commit)));
    head_old := '';
-   git_commit_close(commit);
+   git_commit_free(commit);
    git_repository_free(repo);
+
+   git_reference_free(head);
 end;
 
 initialization

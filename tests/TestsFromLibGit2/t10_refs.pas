@@ -49,7 +49,8 @@ type
       procedure renaming_a_packed_reference_does_not_pack_another_reference_which_happens_to_be_in_both_loose_and_pack_state;
       procedure can_not_rename_a_reference_with_the_name_of_an_existing_reference;
       procedure can_not_rename_a_reference_with_an_invalid_name;
-      procedure can_force__rename_a_reference_with_the_name_of_an_existing_reference;
+      procedure can_force__rename_a_packed_reference_with_the_name_of_an_existing_loose_and_packed_reference;
+      procedure can_force__rename_a_loose_reference_with_the_name_of_an_existing_loose_reference;
       procedure can_not_overwrite_name_of_existing_reference;
    end;
 
@@ -80,9 +81,9 @@ begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
    must_pass(git_reference_lookup(reference, repo, loose_tag_ref_name));
-   must_be_true((reference.type_ and GIT_REF_OID) > 0);
-   must_be_true((reference.type_ and GIT_REF_PACKED) = 0);
-   must_be_true(StrComp(reference.name, loose_tag_ref_name) = 0);
+   must_be_true((git_reference_type(reference) and GIT_REF_OID) <> 0);
+   must_be_true(git_reference_is_packed(reference) = 0);
+   must_be_true(StrComp(git_reference_name(reference), loose_tag_ref_name) = 0);
 
    must_pass(git_object_lookup(object_, repo, git_reference_oid(reference), GIT_OBJ_ANY));
    must_be_true(object_ <> nil);
@@ -92,8 +93,10 @@ begin
    ref_name_from_tag_name := GIT_REFS_TAGS_DIR + AnsiString(git_tag_name(Pgit_tag(object_)));
    must_be_true(StrComp(PAnsiChar(ref_name_from_tag_name), loose_tag_ref_name) = 0);
 
-   git_object_close(object_);
+   git_object_free(object_);
    git_repository_free(repo);
+
+   git_reference_free(reference);
 end;
 
 procedure Test10_refs_readtag.lookup_a_loose_tag_reference_that_doesn_t_exist;
@@ -104,9 +107,11 @@ var
    reference: Pgit_reference;
 begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
-   must_fail(git_reference_lookup(reference, repo, non_existing_tag_ref_name), GIT_ENOTFOUND);
+   must_fail(git_reference_lookup(reference, repo, non_existing_tag_ref_name));
 
    git_repository_free(repo);
+
+   git_reference_free(reference);
 end;
 
 { Test10_refs_readsymref }
@@ -114,7 +119,7 @@ end;
 const
    head_tracker_sym_ref_name: PAnsiChar = 'head-tracker';
    current_head_target:       PAnsiChar = 'refs/heads/master';
-   current_master_tip:        PAnsiChar = 'be3563ae3f795b2b4353bcce3a527ad0a4f7f644';
+   current_master_tip:        PAnsiChar = 'a65fedf39aefe402d3bb6e24df4d4f5fe4547750';
 
 procedure Test10_refs_readsymref.lookup_a_symbolic_reference;
 var
@@ -126,12 +131,12 @@ begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
    must_pass(git_reference_lookup(reference, repo, GIT_HEAD_FILE));
-   must_be_true((reference.type_ and GIT_REF_SYMBOLIC) > 0);
-   must_be_true((reference.type_ and GIT_REF_PACKED) = 0);
-   must_be_true(StrComp(reference.name, GIT_HEAD_FILE) = 0);
+   must_be_true(git_reference_type(reference) and GIT_REF_SYMBOLIC <> 0);
+   must_be_true(git_reference_is_packed(reference) = 0);
+   must_be_true(StrComp(git_reference_name(reference), GIT_HEAD_FILE) = 0);
 
    must_pass(git_reference_resolve(resolved_ref, reference));
-   must_be_true(resolved_ref.type_ = GIT_REF_OID);
+   must_be_true(git_reference_type(resolved_ref) = GIT_REF_OID);
 
    must_pass(git_object_lookup(object_, repo, git_reference_oid(resolved_ref), GIT_OBJ_ANY));
    must_be_true(object_ <> nil);
@@ -140,8 +145,11 @@ begin
    git_oid_fromstr(@id, current_master_tip);
    must_be_true(git_oid_cmp(@id, git_object_id(object_)) = 0);
 
-   git_object_close(object_);
+   git_object_free(object_);
    git_repository_free(repo);
+
+   git_reference_free(reference);
+   git_reference_free(resolved_ref);
 end;
 
 procedure Test10_refs_readsymref.lookup_a_nested_symbolic_reference;
@@ -154,12 +162,12 @@ begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
    must_pass(git_reference_lookup(reference, repo, head_tracker_sym_ref_name));
-   must_be_true((reference.type_ and GIT_REF_SYMBOLIC) > 0);
-   must_be_true((reference.type_ and GIT_REF_PACKED) = 0);
-   must_be_true(StrComp(reference.name, head_tracker_sym_ref_name) = 0);
+   must_be_true((git_reference_type(reference) and GIT_REF_SYMBOLIC) > 0);
+   must_be_true(git_reference_is_packed(reference)  = 0);
+   must_be_true(StrComp(git_reference_name(reference), head_tracker_sym_ref_name) = 0);
 
    must_pass(git_reference_resolve(resolved_ref, reference));
-   must_be_true(resolved_ref.type_ = GIT_REF_OID);
+   must_be_true(git_reference_type(resolved_ref) = GIT_REF_OID);
 
    must_pass(git_object_lookup(object_, repo, git_reference_oid(resolved_ref), GIT_OBJ_ANY));
    must_be_true(object_ <> nil);
@@ -168,8 +176,11 @@ begin
    git_oid_fromstr(@id, current_master_tip);
    must_be_true(git_oid_cmp(@id, git_object_id(object_)) = 0);
 
-   git_object_close(object_);
+   git_object_free(object_);
    git_repository_free(repo);
+
+   git_reference_free(reference);
+   git_reference_free(resolved_ref);
 end;
 
 procedure Test10_refs_readsymref.lookup_the_HEAD_and_resolve_the_master_branch;
@@ -180,17 +191,22 @@ begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
    must_pass(git_reference_lookup(reference, repo, head_tracker_sym_ref_name));
-   must_pass(git_reference_resolve(resolved_ref, reference));
-   comp_base_ref := resolved_ref;
+   must_pass(git_reference_resolve(comp_base_ref, reference));
+   git_reference_free(reference);
 
    must_pass(git_reference_lookup(reference, repo, GIT_HEAD_FILE));
    must_pass(git_reference_resolve(resolved_ref, reference));
    must_pass(git_oid_cmp(git_reference_oid(comp_base_ref), git_reference_oid(resolved_ref)));
+   git_reference_free(reference);
+   git_reference_free(resolved_ref);
 
    must_pass(git_reference_lookup(reference, repo, current_head_target));
    must_pass(git_reference_resolve(resolved_ref, reference));
    must_pass(git_oid_cmp(git_reference_oid(comp_base_ref), git_reference_oid(resolved_ref)));
+   git_reference_free(reference);
+   git_reference_free(resolved_ref);
 
+   git_reference_free(comp_base_ref);
    git_repository_free(repo);
 end;
 
@@ -208,6 +224,10 @@ begin
    must_pass(git_oid_cmp(git_reference_oid(master_ref), git_reference_oid(resolved_ref)));
 
    git_repository_free(repo);
+
+   git_reference_free(reference);
+   git_reference_free(resolved_ref);
+   git_reference_free(master_ref);
 end;
 
 { Test10_refs_readpackedref }
@@ -225,16 +245,18 @@ begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
    must_pass(git_reference_lookup(reference, repo, packed_head_name));
-   must_be_true((reference.type_ and GIT_REF_OID) > 0);
-   must_be_true((reference.type_ and GIT_REF_PACKED) > 0);
-   must_be_true(StrComp(reference.name, packed_head_name) = 0);
+   must_be_true((git_reference_type(reference) and GIT_REF_OID) <> 0);
+   must_be_true(git_reference_is_packed(reference) <> 0);
+   must_be_true(StrComp(git_reference_name(reference), packed_head_name) = 0);
 
    must_pass(git_object_lookup(object_, repo, git_reference_oid(reference), GIT_OBJ_ANY));
    must_be_true(object_ <> nil);
    must_be_true(git_object_type(object_) = GIT_OBJ_COMMIT);
 
-   git_object_close(object_);
+   git_object_free(object_);
    git_repository_free(repo);
+
+   git_reference_free(reference);
 end;
 
 procedure Test10_refs_readpackedref.assure_that_a_loose_reference_is_looked_up_before_a_packed_reference;
@@ -244,12 +266,15 @@ var
 begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
    must_pass(git_reference_lookup(reference, repo, packed_head_name));
+   git_reference_free(reference);
    must_pass(git_reference_lookup(reference, repo, packed_test_head_name));
-   must_be_true((reference.type_ and GIT_REF_OID) > 0);
-   must_be_true((reference.type_ and GIT_REF_PACKED) = 0);
-   must_be_true(StrComp(reference.name, packed_test_head_name) = 0);
+   must_be_true((git_reference_type(reference) and GIT_REF_OID) <> 0);
+   must_be_true(git_reference_is_packed(reference) = 0);
+   must_be_true(StrComp(git_reference_name(reference), packed_test_head_name) = 0);
 
    git_repository_free(repo);
+
+   git_reference_free(reference);
 end;
 
 { Test10_refs_createref }
@@ -268,24 +293,25 @@ begin
    must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
 
    //* Retrieve the physical path to the symbolic ref for further cleaning */
-   ref_path := IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) + String(AnsiString(new_head_tracker));
+   ref_path := IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo)))) + String(AnsiString(new_head_tracker));
 
    //* Create and write the new symbolic reference */
-   must_pass(git_reference_create_symbolic(new_reference, repo, new_head_tracker, current_head_target));
-   git_reference_set_target(new_reference, current_head_target);
+   must_pass(git_reference_create_symbolic(new_reference, repo, new_head_tracker, current_head_target, 0));
 
    //* Ensure the reference can be looked-up... */
    must_pass(git_reference_lookup(looked_up_ref, repo, new_head_tracker));
-   must_be_true((looked_up_ref.type_ and GIT_REF_SYMBOLIC) > 0);
-   must_be_true((looked_up_ref.type_ and GIT_REF_PACKED) = 0);
-   must_be_true(StrComp(looked_up_ref.name, new_head_tracker) = 0);
+   must_be_true((git_reference_type(looked_up_ref) and GIT_REF_SYMBOLIC) > 0);
+   must_be_true(git_reference_is_packed(looked_up_ref) = 0);
+   must_be_true(StrComp(git_reference_name(looked_up_ref), new_head_tracker) = 0);
 
    //* ...peeled.. */
    must_pass(git_reference_resolve(resolved_ref, looked_up_ref));
-   must_be_true(resolved_ref.type_ = GIT_REF_OID);
+   must_be_true(git_reference_type(resolved_ref) = GIT_REF_OID);
 
    //* ...and that it points to the current master tip */
    must_be_true(git_oid_cmp(@id, git_reference_oid(resolved_ref)) = 0);
+   git_reference_free(looked_up_ref);
+   git_reference_free(resolved_ref);
 
    git_repository_free(repo);
 
@@ -297,6 +323,10 @@ begin
    must_be_true(git_oid_cmp(@id, git_reference_oid(resolved_ref)) = 0);
 
    close_temp_repo(repo2);
+
+   git_reference_free(new_reference);
+   git_reference_free(looked_up_ref);
+   git_reference_free(resolved_ref);
 end;
 
 procedure Test10_refs_createref.create_a_deep_symbolic_reference;
@@ -312,16 +342,20 @@ begin
 
    must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
 
-   repo_path := StringReplace(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH))), '/', PathDelim, [rfReplaceAll]);
+   repo_path := StringReplace(String(AnsiString(git_repository_path(repo))), '/', PathDelim, [rfReplaceAll]);
    ref_path := IncludeTrailingPathDelimiter(repo_path + String(AnsiString(new_head_tracker)));
    ref_path := StringReplace(ref_path, PathDelim, '/', [rfReplaceAll]);
 
-   must_pass(git_reference_create_symbolic(new_reference, repo, new_head_tracker, current_head_target));
+   must_pass(git_reference_create_symbolic(new_reference, repo, new_head_tracker, current_head_target, 0));
    must_pass(git_reference_lookup(looked_up_ref, repo, new_head_tracker));
    must_pass(git_reference_resolve(resolved_ref, looked_up_ref));
    must_be_true(git_oid_cmp(@id, git_reference_oid(resolved_ref)) = 0);
 
    close_temp_repo(repo);
+
+   git_reference_free(new_reference);
+   git_reference_free(looked_up_ref);
+   git_reference_free(resolved_ref);
 end;
 
 procedure Test10_refs_createref.create_a_new_OID_reference;
@@ -338,19 +372,20 @@ begin
    must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
 
    //* Retrieve the physical path to the symbolic ref for further cleaning */
-   ref_path := IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) + String(AnsiString(new_head));
+   ref_path := IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo)))) + String(AnsiString(new_head));
 
    //* Create and write the new object id reference */
-   must_pass(git_reference_create_oid(new_reference, repo, new_head, @id));
+   must_pass(git_reference_create_oid(new_reference, repo, new_head, @id, 0));
 
    //* Ensure the reference can be looked-up... */
    must_pass(git_reference_lookup(looked_up_ref, repo, new_head));
-   must_be_true((looked_up_ref.type_ and GIT_REF_OID) > 0);
-   must_be_true((looked_up_ref.type_ and GIT_REF_PACKED) = 0);
-   must_be_true(StrComp(looked_up_ref.name, new_head) = 0);
+   must_be_true((git_reference_type(looked_up_ref) and GIT_REF_OID) > 0);
+   must_be_true(git_reference_is_packed(looked_up_ref) = 0);
+   must_be_true(StrComp(git_reference_name(looked_up_ref), new_head) = 0);
 
    //* ...and that it points to the current master tip */
    must_be_true(git_oid_cmp(@id, git_reference_oid(looked_up_ref)) = 0);
+   git_reference_free(looked_up_ref);
 
    git_repository_free(repo);
 
@@ -361,6 +396,9 @@ begin
    must_be_true(git_oid_cmp(@id, git_reference_oid(looked_up_ref)) = 0);
 
    close_temp_repo(repo2);
+
+   git_reference_free(new_reference);
+   git_reference_free(looked_up_ref);
 end;
 
 procedure Test10_refs_createref.can_not_create_a_new_OID_reference_which_targets_at_an_unknown_id;
@@ -376,7 +414,7 @@ begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
    //* Create and write the new object id reference */
-   must_fail(git_reference_create_oid(new_reference, repo, new_head, @id));
+   must_fail(git_reference_create_oid(new_reference, repo, new_head, @id, 0));
 
    //* Ensure the reference can't be looked-up... */
    must_fail(git_reference_lookup(looked_up_ref, repo, new_head));
@@ -395,7 +433,7 @@ begin
    must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
 
    temp_path :=
-      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) +
+      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo)))) +
       IncludeTrailingPathDelimiter(String(AnsiString(GIT_REFS_HEADS_DIR))) +
       'empty_dir';
 
@@ -419,27 +457,30 @@ begin
    try
       //* Ensure a known loose ref can be looked up */
       must_pass(git_reference_lookup(reference, repo, loose_tag_ref_name));
-      must_be_true((reference.type_ and GIT_REF_PACKED) = 0);
-      must_be_true(StrComp(reference.name, loose_tag_ref_name) = 0);
+      must_be_true(git_reference_is_packed(reference) = 0);
+      must_be_true(StrComp(git_reference_name(reference), loose_tag_ref_name) = 0);
+      git_reference_free(reference);
 
       must_pass(git_reference_packall(repo));
 
       //* Ensure the packed-refs file exists */
       temp_path :=
-         IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) +
+         IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo)))) +
          String(AnsiString(GIT_PACKEDREFS_FILE));
       must_pass(gitfo_exists(temp_path));
 
       //* Ensure the known ref can still be looked up but is now packed */
       must_pass(git_reference_lookup(reference, repo, loose_tag_ref_name));
-      must_be_true((reference.type_ and GIT_REF_PACKED) <> 0);
-      must_be_true(StrComp(reference.name, loose_tag_ref_name) = 0);
+      must_be_true(git_reference_is_packed(reference) <> 0);
+      must_be_true(StrComp(git_reference_name(reference), loose_tag_ref_name) = 0);
 
       //* Ensure the known ref has been removed from the loose folder structure */
       temp_path :=
-         IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) +
+         IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo)))) +
          String(AnsiString(loose_tag_ref_name));
       must_pass(gitfo_not_exists(temp_path));
+
+      git_reference_free(reference);
    finally
       close_temp_repo(repo);
    end;
@@ -457,7 +498,7 @@ begin
 
    //* Ensure the ref doesn't exist on the file system */
    temp_path :=
-      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) +
+      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo)))) +
       String(AnsiString(new_name));
    must_pass(gitfo_not_exists(temp_path));
 
@@ -465,30 +506,33 @@ begin
    must_pass(git_reference_lookup(looked_up_ref, repo, loose_tag_ref_name));
 
    //* ... which is indeed loose */
-   must_be_true((looked_up_ref.type_ and GIT_REF_PACKED) = 0);
+   must_be_true(git_reference_is_packed(looked_up_ref) = 0);
 
    //* Now that the reference is renamed... */
-   must_pass(git_reference_rename(looked_up_ref, new_name));
-   must_be_true(StrComp(looked_up_ref.name, new_name) = 0);
+   must_pass(git_reference_rename(looked_up_ref, new_name, 0));
+   must_be_true(StrComp(git_reference_name(looked_up_ref), new_name) = 0);
 
    //* ...It can't be looked-up with the old name... */
    must_fail(git_reference_lookup(another_looked_up_ref, repo, loose_tag_ref_name));
 
    //* ...but the new name works ok... */
    must_pass(git_reference_lookup(another_looked_up_ref, repo, new_name));
-   must_be_true(StrComp(another_looked_up_ref.name, new_name) = 0);
+   must_be_true(StrComp(git_reference_name(another_looked_up_ref), new_name) = 0);
 
    //* .. the ref is still loose... */
-   must_be_true((another_looked_up_ref.type_ and GIT_REF_PACKED) = 0);
-   must_be_true((looked_up_ref.type_ and GIT_REF_PACKED) = 0);
+   must_be_true(git_reference_is_packed(another_looked_up_ref) = 0);
+   must_be_true(git_reference_is_packed(looked_up_ref) = 0);
 
    //* ...and the ref can be found in the file system */
    temp_path :=
-      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) +
+      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo)))) +
       String(AnsiString(new_name));
    must_pass(gitfo_exists(temp_path));
 
    close_temp_repo(repo);
+
+   git_reference_free(looked_up_ref);
+   git_reference_free(another_looked_up_ref);
 end;
 
 procedure Test10_refs_rename.rename_packed_reference__should_make_it_loose_;
@@ -503,7 +547,7 @@ begin
 
    //* Ensure the ref doesn't exist on the file system */
    temp_path :=
-      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) +
+      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo)))) +
       String(AnsiString(packed_head_name));
    must_pass(gitfo_not_exists(temp_path));
 
@@ -511,30 +555,33 @@ begin
    must_pass(git_reference_lookup(looked_up_ref, repo, packed_head_name));
 
    //* .. and it's packed */
-   must_be_true((looked_up_ref.type_ and GIT_REF_PACKED) <> 0);
+   must_be_true(git_reference_is_packed(looked_up_ref) <> 0);
 
    //* Now that the reference is renamed... */
-   must_pass(git_reference_rename(looked_up_ref, brand_new_name));
-   must_be_true(StrComp(looked_up_ref.name, brand_new_name) = 0);
+   must_pass(git_reference_rename(looked_up_ref, brand_new_name, 0));
+   must_be_true(StrComp(git_reference_name(looked_up_ref), brand_new_name) = 0);
 
    //* ...It can't be looked-up with the old name... */
    must_fail(git_reference_lookup(another_looked_up_ref, repo, packed_head_name));
 
    //* ...but the new name works ok... */
    must_pass(git_reference_lookup(another_looked_up_ref, repo, brand_new_name));
-   must_be_true(StrComp(another_looked_up_ref.name, brand_new_name) = 0);
+   must_be_true(StrComp(git_reference_name(another_looked_up_ref), brand_new_name) = 0);
 
    //* .. the ref is no longer packed... */
-   must_be_true((another_looked_up_ref.type_ and GIT_REF_PACKED) = 0);
-   must_be_true((looked_up_ref.type_ and GIT_REF_PACKED) = 0);
+   must_be_true(git_reference_is_packed(another_looked_up_ref) = 0);
+   must_be_true(git_reference_is_packed(looked_up_ref) = 0);
 
    //* ...and the ref now happily lives in the file system */
    temp_path :=
-      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) +
+      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo)))) +
       String(AnsiString(brand_new_name));
    must_pass(gitfo_exists(temp_path));
 
    close_temp_repo(repo);
+
+   git_reference_free(looked_up_ref);
+   git_reference_free(another_looked_up_ref);
 end;
 
 procedure Test10_refs_rename.renaming_a_packed_reference_does_not_pack_another_reference_which_happens_to_be_in_both_loose_and_pack_state;
@@ -549,7 +596,7 @@ begin
 
    //* Ensure the other reference exists on the file system */
    temp_path :=
-      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) +
+      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo)))) +
       String(AnsiString(packed_test_head_name));
    must_pass(gitfo_exists(temp_path));
 
@@ -557,27 +604,31 @@ begin
    must_pass(git_reference_lookup(another_looked_up_ref, repo, packed_test_head_name));
 
    //* Ensure it's loose */
-   must_be_true((another_looked_up_ref.type_ and GIT_REF_PACKED) = 0);
+   must_be_true(git_reference_is_packed(another_looked_up_ref) = 0);
+   git_reference_free(another_looked_up_ref);
 
    //* Lookup the reference to rename */
    must_pass(git_reference_lookup(looked_up_ref, repo, packed_head_name));
 
    //* Ensure it's packed */
-   must_be_true((looked_up_ref.type_ and GIT_REF_PACKED) <> 0);
+   must_be_true(git_reference_is_packed(looked_up_ref) <> 0);
 
    //* Now that the reference is renamed... */
-   must_pass(git_reference_rename(looked_up_ref, brand_new_name));
+   must_pass(git_reference_rename(looked_up_ref, brand_new_name, 0));
 
    //* Lookup the other reference */
    must_pass(git_reference_lookup(another_looked_up_ref, repo, packed_test_head_name));
 
    //* Ensure it's loose */
-   must_be_true((another_looked_up_ref.type_ and GIT_REF_PACKED) = 0);
+   must_be_true(git_reference_is_packed(another_looked_up_ref) = 0);
 
    //* Ensure the other ref still exists on the file system */
    must_pass(gitfo_exists(temp_path));
 
    close_temp_repo(repo);
+
+   git_reference_free(looked_up_ref);
+   git_reference_free(another_looked_up_ref);
 end;
 
 procedure Test10_refs_rename.can_not_rename_a_reference_with_the_name_of_an_existing_reference;
@@ -591,13 +642,16 @@ begin
    must_pass(git_reference_lookup(looked_up_ref, repo, packed_head_name));
 
    //* Can not be renamed to the name of another existing reference. */
-   must_fail(git_reference_rename(looked_up_ref, packed_test_head_name));
+   must_fail(git_reference_rename(looked_up_ref, packed_test_head_name, 0));
+   git_reference_free(looked_up_ref);
 
    //* Failure to rename it hasn't corrupted its state */
    must_pass(git_reference_lookup(looked_up_ref, repo, packed_head_name));
-   must_be_true(StrComp(looked_up_ref.name, packed_head_name) = 0);
+   must_be_true(StrComp(git_reference_name(looked_up_ref), packed_head_name) = 0);
 
    close_temp_repo(repo);
+
+   git_reference_free(looked_up_ref);
 end;
 
 procedure Test10_refs_rename.can_not_rename_a_reference_with_an_invalid_name;
@@ -611,34 +665,75 @@ begin
    must_pass(git_reference_lookup(looked_up_ref, repo, packed_test_head_name));
 
    //* Can not be renamed with an invalid name. */
-   must_fail(git_reference_rename(looked_up_ref, 'Hello! I''m a very invalid name.'));
+   must_fail(git_reference_rename(looked_up_ref, 'Hello! I''m a very invalid name.', 0));
 
    //* Can not be renamed outside of the refs hierarchy. */
-   must_fail(git_reference_rename(looked_up_ref, 'i-will-sudo-you'));
+   must_fail(git_reference_rename(looked_up_ref, 'i-will-sudo-you', 0));
 
    //* Failure to rename it hasn't corrupted its state */
+   git_reference_free(looked_up_ref);
    must_pass(git_reference_lookup(looked_up_ref, repo, packed_test_head_name));
-   must_be_true(StrComp(looked_up_ref.name, packed_test_head_name) = 0);
+   must_be_true(StrComp(git_reference_name(looked_up_ref), packed_test_head_name) = 0);
 
    close_temp_repo(repo);
+
+   git_reference_free(looked_up_ref);
 end;
 
-procedure Test10_refs_rename.can_force__rename_a_reference_with_the_name_of_an_existing_reference;
+procedure Test10_refs_rename.can_force__rename_a_loose_reference_with_the_name_of_an_existing_loose_reference;
 var
    looked_up_ref: Pgit_reference;
    repo: Pgit_repository;
+   oid: git_oid;
+begin
+   must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
+   try
+      //* An existing reference */
+      must_pass(git_reference_lookup(looked_up_ref, repo, 'refs/heads/br2'));
+      git_oid_cpy(@oid, git_reference_oid(looked_up_ref));
+
+      //* Can be force-renamed to the name of another existing reference. */
+      must_pass(git_reference_rename(looked_up_ref, 'refs/heads/test', 1));
+      git_reference_free(looked_up_ref);
+
+      //* Check we actually renamed it */
+      must_pass(git_reference_lookup(looked_up_ref, repo, 'refs/heads/test'));
+      must_be_true(StrComp(git_reference_name(looked_up_ref), 'refs/heads/test') = 0);
+      must_be_true(git_oid_cmp(@oid, git_reference_oid(looked_up_ref)) = 0);
+      git_reference_free(looked_up_ref);
+
+      //* And that the previous one doesn't exist any longer */
+      must_fail(git_reference_lookup(looked_up_ref, repo, 'refs/heads/br2'));
+
+      git_reference_free(looked_up_ref);
+   finally
+      close_temp_repo(repo);
+   end;
+end;
+
+procedure Test10_refs_rename.can_force__rename_a_packed_reference_with_the_name_of_an_existing_loose_and_packed_reference;
+var
+   looked_up_ref: Pgit_reference;
+   repo: Pgit_repository;
+   oid: git_oid;
 begin
    must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
    try
       //* An existing reference... */
       must_pass(git_reference_lookup(looked_up_ref, repo, packed_head_name));
+      git_oid_cpy(@oid, git_reference_oid(looked_up_ref));
 
       //* Can be force-renamed to the name of another existing reference. */
-      must_pass(git_reference_rename_f(looked_up_ref, packed_test_head_name));
+      must_pass(git_reference_rename(looked_up_ref, packed_test_head_name, 1));
+      git_reference_free(looked_up_ref);
 
       //* Check we actually renamed it */
       must_pass(git_reference_lookup(looked_up_ref, repo, packed_test_head_name));
-      must_be_true(StrComp(looked_up_ref.name, packed_test_head_name) = 0);
+      must_be_true(StrComp(git_reference_name(looked_up_ref), packed_test_head_name) = 0);
+      must_be_true(git_oid_cmp(@oid, git_reference_oid(looked_up_ref)) = 0);
+      git_reference_free(looked_up_ref);
+
+      must_fail(git_reference_lookup(looked_up_ref, repo, packed_head_name));
    finally
       close_temp_repo(repo);
    end;
@@ -657,24 +752,29 @@ begin
    must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
 
    must_pass(git_reference_lookup(ref, repo, ref_master_name));
-   must_be_true(ref.type_ and GIT_REF_OID <> 0);
+   must_be_true((git_reference_type(ref) and GIT_REF_OID) <> 0);
 
    git_oid_cpy(@id, git_reference_oid(ref));
 
    //* Create loose references */
-   must_pass(git_reference_create_oid(ref_one, repo, ref_one_name, @id));
-   must_pass(git_reference_create_oid(ref_two, repo, ref_two_name, @id));
+   must_pass(git_reference_create_oid(ref_one, repo, ref_one_name, @id, 0));
+   must_pass(git_reference_create_oid(ref_two, repo, ref_two_name, @id, 0));
 
    //* Pack everything */
    must_pass(git_reference_packall(repo));
 
    //* Attempt to create illegal reference */
-   must_fail(git_reference_create_oid(ref_one_new, repo, ref_one_name_new, @id));
+   must_fail(git_reference_create_oid(ref_one_new, repo, ref_one_name_new, @id, 0));
 
    //* Illegal reference couldn't be created so this is supposed to fail */
    must_fail(git_reference_lookup(ref_one_new, repo, ref_one_name_new));
 
    close_temp_repo(repo);
+
+   git_reference_free(ref);
+   git_reference_free(ref_one);
+   git_reference_free(ref_one_new);
+   git_reference_free(ref_two);
 end;
 
 { Test10_refs_delete }
@@ -689,7 +789,7 @@ begin
 
    //* Ensure the loose reference exists on the file system */
    temp_path :=
-      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo, GIT_REPO_PATH)))) +
+      IncludeTrailingPathDelimiter(String(AnsiString(git_repository_path(repo)))) +
       String(AnsiString(packed_test_head_name));
    must_pass(gitfo_exists(temp_path));
 
@@ -697,7 +797,7 @@ begin
    must_pass(git_reference_lookup(looked_up_ref, repo, packed_test_head_name));
 
    //* Ensure it's the loose version that has been found */
-   must_be_true((looked_up_ref.type_ and GIT_REF_PACKED) = 0);
+   must_be_true(git_reference_is_packed(looked_up_ref) = 0);
 
    //* Now that the reference is deleted... */
    must_pass(git_reference_delete(looked_up_ref));
@@ -709,6 +809,8 @@ begin
    must_pass(gitfo_not_exists(temp_path));
 
    close_temp_repo(repo);
+
+   git_reference_free(another_looked_up_ref);
 end;
 
 { Test10_refs_list }
@@ -721,10 +823,10 @@ begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
    must_pass(git_reference_listall(@ref_list, repo, GIT_REF_LISTALL));
 
-   (* We have exactly 8 refs in total if we include the packed ones:
+   (* We have exactly 9 refs in total if we include the packed ones:
     * there is a reference that exists both in the packfile and as
     * loose, but we only list it once *)
-   must_be_true(ref_list.count = 8);
+   must_be_true(ref_list.count = 9);
 
    git_strarray_free(@ref_list);
    git_repository_free(repo);
@@ -758,16 +860,20 @@ begin
    must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
 
    //* The target needds to exist and we need to check the name has changed */
-   must_pass(git_reference_create_symbolic(branch_ref, repo, ref_branch_name, ref_master_name));
-   must_pass(git_reference_create_symbolic(ref, repo, ref_name, ref_branch_name));
+   must_pass(git_reference_create_symbolic(branch_ref, repo, ref_branch_name, ref_master_name, 0));
+   must_pass(git_reference_create_symbolic(ref, repo, ref_name, ref_branch_name, 0));
+   git_reference_free(ref);
+
    //* Ensure it points to the right place*/
    must_pass(git_reference_lookup(ref, repo, ref_name));
    must_be_true(git_reference_type(ref) and GIT_REF_SYMBOLIC <> 0);
    must_be_true(StrComp(git_reference_target(ref), ref_branch_name) = 0);
+   git_reference_free(ref);
 
    //* Ensure we can't create it unless we force it to */
-   must_fail(git_reference_create_symbolic(ref, repo, ref_name, ref_master_name));
-   must_pass(git_reference_create_symbolic_f(ref, repo, ref_name, ref_master_name));
+   must_fail(git_reference_create_symbolic(ref, repo, ref_name, ref_master_name, 0));
+   must_pass(git_reference_create_symbolic(ref, repo, ref_name, ref_master_name, 1));
+   git_reference_free(ref);
 
    //* Ensure it points to the right place */
    must_pass(git_reference_lookup(ref, repo, ref_name));
@@ -775,6 +881,8 @@ begin
    must_be_true(StrComp(git_reference_target(ref), ref_master_name) = 0);
 
    close_temp_repo(repo);
+   git_reference_free(ref);
+   git_reference_free(branch_ref);
 end;
 
 procedure Test10_refs_overwriteref.overwrite_an_existing_object_id_reference;
@@ -786,23 +894,29 @@ begin
    must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
    try
       must_pass(git_reference_lookup(ref, repo, ref_master_name));
-      must_be_true(ref.type_ and GIT_REF_OID <> 0);
+      must_be_true(git_reference_type(ref) and GIT_REF_OID <> 0);
       git_oid_cpy(@id, git_reference_oid(ref));
+      git_reference_free(ref);
 
       //* Create it */
-      must_pass(git_reference_create_oid(ref, repo, ref_name, @id));
+      must_pass(git_reference_create_oid(ref, repo, ref_name, @id, 0));
+      git_reference_free(ref);
 
       must_pass(git_reference_lookup(ref, repo, ref_test_name));
-      must_be_true(ref.type_ and GIT_REF_OID <> 0);
+      must_be_true(git_reference_type(ref) and GIT_REF_OID <> 0);
       git_oid_cpy(@id, git_reference_oid(ref));
+      git_reference_free(ref);
 
       //* Ensure we can't overwrite unless we force it */
-      must_fail(git_reference_create_oid(ref, repo, ref_name, @id));
-      must_pass(git_reference_create_oid_f(ref, repo, ref_name, @id));
+      must_fail(git_reference_create_oid(ref, repo, ref_name, @id, 0));
+      must_pass(git_reference_create_oid(ref, repo, ref_name, @id, 1));
+      git_reference_free(ref);
 
       //* Ensure it has been overwritten */
       must_pass(git_reference_lookup(ref, repo, ref_name));
       must_be_true(git_oid_cmp(@id, git_reference_oid(ref)) = 0);
+
+      git_reference_free(ref);
    finally
       close_temp_repo(repo);
    end;
@@ -817,17 +931,22 @@ begin
    must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
    try
       must_pass(git_reference_lookup(ref, repo, ref_master_name));
-      must_be_true(ref.type_ and GIT_REF_OID <> 0);
+      must_be_true(git_reference_type(ref) and GIT_REF_OID <> 0);
       git_oid_cpy(@id, git_reference_oid(ref));
+      git_reference_free(ref);
 
-      must_pass(git_reference_create_oid(ref, repo, ref_name, @id));
-      must_fail(git_reference_create_symbolic(ref, repo, ref_name, ref_master_name));
-      must_pass(git_reference_create_symbolic_f(ref, repo, ref_name, ref_master_name));
+      must_pass(git_reference_create_oid(ref, repo, ref_name, @id, 0));
+      git_reference_free(ref);
+      must_fail(git_reference_create_symbolic(ref, repo, ref_name, ref_master_name, 0));
+      must_pass(git_reference_create_symbolic(ref, repo, ref_name, ref_master_name, 1));
+      git_reference_free(ref);
 
       //* Ensure it points to the right place */
       must_pass(git_reference_lookup(ref, repo, ref_name));
       must_be_true(git_reference_type(ref) and GIT_REF_SYMBOLIC <> 0);
       must_be_true(StrComp(git_reference_target(ref), ref_master_name) = 0);
+
+      git_reference_free(ref);
    finally
       close_temp_repo(repo);
    end;
@@ -842,19 +961,24 @@ begin
    must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
    try
       must_pass(git_reference_lookup(ref, repo, ref_master_name));
-      must_be_true(ref.type_ and GIT_REF_OID <> 0);
+      must_be_true(git_reference_type(ref) and GIT_REF_OID <> 0);
       git_oid_cpy(@id, git_reference_oid(ref));
+      git_reference_free(ref);
 
       //* Create the symbolic ref */
-      must_pass(git_reference_create_symbolic(ref, repo, ref_name, ref_master_name));
+      must_pass(git_reference_create_symbolic(ref, repo, ref_name, ref_master_name, 0));
+      git_reference_free(ref);
       //* It shouldn't overwrite unless we tell it to */
-      must_fail(git_reference_create_oid(ref, repo, ref_name, @id));
-      must_pass(git_reference_create_oid_f(ref, repo, ref_name, @id));
+      must_fail(git_reference_create_oid(ref, repo, ref_name, @id, 0));
+      must_pass(git_reference_create_oid(ref, repo, ref_name, @id, 1));
+      git_reference_free(ref);
 
       //* Ensure it points to the right place */
       must_pass(git_reference_lookup(ref, repo, ref_name));
       must_be_true(git_reference_type(ref) and GIT_REF_OID <> 0);
       must_be_true(git_oid_cmp(git_reference_oid(ref), @id) = 0);
+
+      git_reference_free(ref);
    finally
       close_temp_repo(repo);
    end;

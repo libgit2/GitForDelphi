@@ -18,8 +18,8 @@ type
       procedure test_for_invalid_ext_headers;
       procedure don_t_fail_on_empty_files;
       procedure replace_a_value;
-      procedure a_repo_s_config_overrides_the_global_config;
-      procedure fall_back_to_the_global_config;
+//      procedure a_repo_s_config_overrides_the_global_config;
+//      procedure fall_back_to_the_global_config;
    end;
 
 implementation
@@ -33,7 +33,7 @@ var
    i: Integer;
 begin
    must_pass(git_config_open_ondisk(&cfg, PAnsiChar(CONFIG_BASE + AnsiString('/config0'))));
-   must_pass(git_config_get_int(cfg, 'core.repositoryformatversion', i));
+   must_pass(git_config_get_int32(cfg, 'core.repositoryformatversion', @i));
    must_be_true(i = 0);
    must_pass(git_config_get_bool(cfg, 'core.filemode', i));
    must_be_true(i = 1);
@@ -92,10 +92,8 @@ begin
    must_pass(git_config_get_string(cfg, 'section.subsection.var', s));
    must_be_true(StrComp(s, 'hello') = 0);
 
-   //* Avoid a false positive */
-   s := 'nohello';
-   must_pass(git_config_get_string(cfg, 'section.subSectIon.var', s));
-   must_be_true(StrComp(s, 'hello') = 0);
+   //* The subsection is transformed to lower-case */
+   must_fail(git_config_get_string(cfg, 'section.subSectIon.var', s));
 
    git_config_free(cfg);
 end;
@@ -120,29 +118,29 @@ end;
 procedure Test15_test_config.test_number_suffixes;
 var
    cfg: Pgit_config;
-   i: LongInt;
+   i: Int64;
 begin
    must_pass(git_config_open_ondisk(cfg, PAnsiChar(CONFIG_BASE + AnsiString('/config5'))));
 
-   must_pass(git_config_get_long(cfg, 'number.simple', i));
+   must_pass(git_config_get_int64(cfg, 'number.simple', @i));
    must_be_true(i = 1);
 
-   must_pass(git_config_get_long(cfg, 'number.k', i));
+   must_pass(git_config_get_int64(cfg, 'number.k', @i));
    must_be_true(i = 1 * 1024);
 
-   must_pass(git_config_get_long(cfg, 'number.kk', i));
+   must_pass(git_config_get_int64(cfg, 'number.kk', @i));
    must_be_true(i = 1 * 1024);
 
-   must_pass(git_config_get_long(cfg, 'number.m', i));
+   must_pass(git_config_get_int64(cfg, 'number.m', @i));
    must_be_true(i = 1 * 1024 * 1024);
 
-   must_pass(git_config_get_long(cfg, 'number.mm', i));
+   must_pass(git_config_get_int64(cfg, 'number.mm', @i));
    must_be_true(i = 1 * 1024 * 1024);
 
-   must_pass(git_config_get_long(cfg, 'number.g', i));
+   must_pass(git_config_get_int64(cfg, 'number.g', @i));
    must_be_true(i = 1 * 1024 * 1024 * 1024);
 
-   must_pass(git_config_get_long(cfg, 'number.gg', i));
+   must_pass(git_config_get_int64(cfg, 'number.gg', @i));
    must_be_true(i = 1 * 1024 * 1024 * 1024);
 
    git_config_free(cfg);
@@ -187,46 +185,46 @@ var
 begin
    //* By freeing the config, we make sure we flush the values  */
    must_pass(git_config_open_ondisk(cfg, PAnsiChar(CONFIG_BASE + AnsiString('/config9'))));
-   must_pass(git_config_set_int(cfg, 'core.dummy', 5));
+   must_pass(git_config_set_int32(cfg, 'core.dummy', 5));
    git_config_free(cfg);
 
    must_pass(git_config_open_ondisk(cfg, PAnsiChar(CONFIG_BASE + AnsiString('/config9'))));
-   must_pass(git_config_get_int(cfg, 'core.dummy', i));
+   must_pass(git_config_get_int32(cfg, 'core.dummy', @i));
    must_be_true(i = 5);
    git_config_free(cfg);
 
    must_pass(git_config_open_ondisk(cfg, PAnsiChar(CONFIG_BASE + AnsiString('/config9'))));
-   must_pass(git_config_set_int(cfg, 'core.dummy', 1));
+   must_pass(git_config_set_int32(cfg, 'core.dummy', 1));
    git_config_free(cfg);
 end;
 
-procedure Test15_test_config.a_repo_s_config_overrides_the_global_config;
-var
-   repo: Pgit_repository;
-   cfg: Pgit_config;
-   version: Integer;
-begin
-   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
-   must_pass(git_repository_config(cfg, repo, 'resources/config/.gitconfig', nil));
-   must_pass(git_config_get_int(cfg, 'core.repositoryformatversion', version));
-   must_be_true(version = 0);
-   git_config_free(cfg);
-   git_repository_free(repo);
-end;
+//procedure Test15_test_config.a_repo_s_config_overrides_the_global_config;
+//var
+//   repo: Pgit_repository;
+//   cfg: Pgit_config;
+//   version: Integer;
+//begin
+//   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
+//   must_pass(git_repository_config(cfg, repo, 'resources/config/.gitconfig', nil));
+//   must_pass(git_config_get_int32(cfg, 'core.repositoryformatversion', @version));
+//   must_be_true(version = 0);
+//   git_config_free(cfg);
+//   git_repository_free(repo);
+//end;
 
-procedure Test15_test_config.fall_back_to_the_global_config;
-var
-   repo: Pgit_repository;
-   cfg: Pgit_config;
-   num: Integer;
-begin
-   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
-   must_pass(git_repository_config(cfg, repo, 'resources/config/.gitconfig', nil));
-   must_pass(git_config_get_int(cfg, 'core.something', num));
-   must_be_true(num = 2);
-   git_config_free(cfg);
-   git_repository_free(repo);
-end;
+//procedure Test15_test_config.fall_back_to_the_global_config;
+//var
+//   repo: Pgit_repository;
+//   cfg: Pgit_config;
+//   num: Integer;
+//begin
+//   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
+//   must_pass(git_repository_config(cfg, repo, 'resources/config/.gitconfig', nil));
+//   must_pass(git_config_get_int32(cfg, 'core.something', @num));
+//   must_be_true(num = 2);
+//   git_config_free(cfg);
+//   git_repository_free(repo);
+//end;
 
 initialization
    RegisterTest('From libgit2.t15-config', Test15_test_config.NamedSuite('config'));

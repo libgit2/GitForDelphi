@@ -39,7 +39,7 @@ type
    end;
 
 const
-   REPOSITORY_FOLDER_         = 'resources/testrepo.git/';
+   REPOSITORY_FOLDER_         = 'resources/testrepo.git';
    TEST_INDEX_PATH            = 'resources/testrepo.git/index';
    TEST_INDEX2_PATH           = 'resources/gitgit.index';
    TEST_INDEXBIG_PATH         = 'resources/big.index';
@@ -137,6 +137,12 @@ function TTestFromLibGit2.GitReturnValue(aResult: Integer): String;
 var
    errorName, errorMessage: AnsiString;
 begin
+   if aResult = GIT_SUCCESS then
+   begin
+      Result := '';
+      Exit;
+   end;
+
    errorName := git_strerror(aResult);
    errorMessage := git_lasterror;
 
@@ -153,7 +159,7 @@ end;
 
 function TTestFromLibGit2.remove_loose_object(const aRepository_folder: PAnsiChar; object_: Pgit_object): Integer;
 const
-   objects_folder = 'objects/';
+   objects_folder = '/objects/';
 var
    ptr, full_path, top_folder: PAnsiChar;
    path_length, objects_length: Integer;
@@ -345,28 +351,28 @@ begin
       Exit;
    end;
 
-   if ((git_repository_path(repo, GIT_REPO_PATH_WORKDIR) <> nil) or (expected_working_directory <> nil)) then
+   if ((git_repository_workdir(repo) <> nil) or (expected_working_directory <> nil)) then
    begin
-      if (git__suffixcmp(git_repository_path(repo, GIT_REPO_PATH_WORKDIR), expected_working_directory) <> 0) then
+      if (git__suffixcmp(git_repository_workdir(repo), expected_working_directory) <> 0) then
          goto cleanup;
    end;
 
-   if (git__suffixcmp(git_repository_path(repo, GIT_REPO_PATH_ODB), PAnsiChar(path_odb)) <> 0) then
+//   if (git__suffixcmp(git_repository_odb(repo), PAnsiChar(path_odb)) <> 0) then
+//      goto cleanup;
+
+   if (git__suffixcmp(git_repository_path(repo), expected_path_repository) <> 0) then
       goto cleanup;
 
-   if (git__suffixcmp(git_repository_path(repo, GIT_REPO_PATH), expected_path_repository) <> 0) then
-      goto cleanup;
-
-   if ((git_repository_path(repo, GIT_REPO_PATH_INDEX) <> nil) or (expected_path_index <> nil)) then
-   begin
-      if (git__suffixcmp(git_repository_path(repo, GIT_REPO_PATH_INDEX), expected_path_index) <> 0) then
-         goto cleanup;
-
-      if (git_repository_is_bare(repo) = 1) then
-         goto cleanup;
-   end
-   else if (git_repository_is_bare(repo) = 0) then
-         goto cleanup;
+//   if ((git_repository_index(repo) <> nil) or (expected_path_index <> nil)) then
+//   begin
+//      if (git__suffixcmp(git_repository_path(repo, GIT_REPO_PATH_INDEX), expected_path_index) <> 0) then
+//         goto cleanup;
+//
+//      if (git_repository_is_bare(repo) = 1) then
+//         goto cleanup;
+//   end
+//   else if (git_repository_is_bare(repo) = 0) then
+//         goto cleanup;
 
    if (git_repository_is_empty(repo) = 0) then
       goto cleanup;

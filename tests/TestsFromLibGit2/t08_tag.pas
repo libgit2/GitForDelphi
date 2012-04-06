@@ -14,7 +14,6 @@ type
 
    Test08_tag_write = class(TTestFromLibGit2)
       procedure write_a_tag_to_the_repository_and_read_it_again;
-      procedure write_a_tag_to_the_repository_which_points_to_an_unknown_oid_should_fail;
       procedure attempt_to_write_a_tag_bearing_the_same_name_than_an_already_existing_tag;
       procedure replace_an_already_existing_tag;
       procedure delete_an_already_existing_tag;
@@ -52,9 +51,9 @@ begin
 
    CheckTrue(git_oid_cmp(@id_commit, git_commit_id(commit)) = 0);
 
-   git_tag_close(tag1);
-   git_tag_close(tag2);
-   git_commit_close(commit);
+   git_tag_free(tag1);
+   git_tag_free(tag2);
+   git_commit_free(commit);
    git_repository_free(repo);
 end;
 
@@ -86,25 +85,27 @@ var
    target_id, tag_id: git_oid;
    tagger: Pgit_signature;
    ref_tag: Pgit_reference;
+   target: Pgit_object;
 begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
    git_oid_fromstr(@target_id, tagged_commit);
+   must_pass(git_object_lookup(target, repo, @target_id, GIT_OBJ_COMMIT));
 
    //* create signature */
-   tagger := git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
-   must_be_true(tagger <> nil);
+   must_pass(git_signature_new(tagger, TAGGER_NAME, TAGGER_EMAIL, 123456789, 60));
 
    must_pass(git_tag_create(
       @tag_id, //* out id */
       repo,
       'the-tag',
-      @target_id,
-      GIT_OBJ_COMMIT,
+      target,
       tagger,
-      TAGGER_MESSAGE));
+      TAGGER_MESSAGE,
+      0));
 
-   git_signature_free(Pgit_signature(tagger));
+   git_object_free(target);
+   git_signature_free(tagger);
 
    must_pass(git_tag_lookup(tag, repo, @tag_id));
    must_be_true(git_oid_cmp(git_tag_target_oid(tag), @target_id) = 0);
@@ -125,35 +126,7 @@ begin
 
    must_pass(remove_loose_object(REPOSITORY_FOLDER, Pgit_object(tag)));
 
-   git_tag_close(tag);
-   git_repository_free(repo);
-end;
-
-procedure Test08_tag_write.write_a_tag_to_the_repository_which_points_to_an_unknown_oid_should_fail;
-var
-   repo: Pgit_repository;
-   target_id, tag_id: git_oid;
-   tagger: Pgit_signature;
-begin
-   must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
-
-   git_oid_fromstr(@target_id, 'deadbeef1b46c854b31185ea97743be6a8774479');
-
-   //* create signature */
-   tagger := git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
-   must_be_true(tagger <> nil);
-
-   must_fail(git_tag_create(
-      @tag_id, //* out id */
-      repo,
-      'the-zombie-tag',
-      @target_id,
-      GIT_OBJ_COMMIT,
-      tagger,
-      TAGGER_MESSAGE));
-
-   git_signature_free(Pgit_signature(tagger));
-
+   git_tag_free(tag);
    git_repository_free(repo);
 end;
 
@@ -162,24 +135,26 @@ var
    repo: Pgit_repository;
    target_id, tag_id: git_oid;
    tagger: Pgit_signature;
+   target: Pgit_object;
 begin
    must_pass(git_repository_open(repo, REPOSITORY_FOLDER));
 
    git_oid_fromstr(@target_id, tagged_commit);
+   must_pass(git_object_lookup(target, repo, @target_id, GIT_OBJ_COMMIT));
 
    //* create signature */
-   tagger := git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
-   must_be_true(tagger <> nil);
+   must_pass(git_signature_new(tagger, TAGGER_NAME, TAGGER_EMAIL, 123456789, 60));
 
    must_fail(git_tag_create(
       @tag_id, //* out id */
       repo,
       'e90810b',
-      @target_id,
-      GIT_OBJ_COMMIT,
+      target,
       tagger,
-      TAGGER_MESSAGE));
+      TAGGER_MESSAGE,
+      0));
 
+   git_object_free(target);
    git_signature_free(Pgit_signature(tagger));
 
    git_repository_free(repo);
@@ -191,27 +166,30 @@ var
    target_id, tag_id, old_tag_id: git_oid;
    tagger: Pgit_signature;
    ref_tag: Pgit_reference;
+   target: Pgit_object;
 begin
    must_pass(open_temp_repo(repo, REPOSITORY_FOLDER));
 
    git_oid_fromstr(@target_id, tagged_commit);
+   must_pass(git_object_lookup(target, repo, @target_id, GIT_OBJ_COMMIT));
 
    must_pass(git_reference_lookup(ref_tag, repo, 'refs/tags/e90810b'));
    git_oid_cpy(@old_tag_id, git_reference_oid(ref_tag));
+   git_reference_free(ref_tag);
 
    //* create signature */
-   tagger := git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
-   must_be_true(tagger <> nil);
+   must_pass(git_signature_new(tagger, TAGGER_NAME, TAGGER_EMAIL, 123456789, 60));
 
-   must_pass(git_tag_create_f(
+   must_pass(git_tag_create(
       @tag_id, //* out id */
       repo,
       'e90810b',
-      @target_id,
-      GIT_OBJ_COMMIT,
+      target,
       tagger,
-      TAGGER_MESSAGE));
+      TAGGER_MESSAGE,
+      1));
 
+   git_object_free(target);
    git_signature_free(Pgit_signature(tagger));
 
    must_pass(git_reference_lookup(ref_tag, repo, 'refs/tags/e90810b'));
@@ -219,6 +197,8 @@ begin
    must_be_true(git_oid_cmp(git_reference_oid(ref_tag), @old_tag_id) <> 0);
 
    close_temp_repo(repo);
+
+   git_reference_free(ref_tag);
 end;
 
 procedure Test08_tag_write.delete_an_already_existing_tag;

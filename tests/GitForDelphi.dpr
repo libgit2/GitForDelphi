@@ -29,7 +29,6 @@ uses
   uTestHelpers in 'uTestHelpers.pas',
   t10_refs in 'TestsFromLibGit2\t10_refs.pas',
   uGitForDelphi in '..\uGitForDelphi.pas',
-  t12_repo in 'TestsFromLibGit2\t12_repo.pas',
   t15_config in 'TestsFromLibGit2\t15_config.pas';
 
 {$R *.RES}
